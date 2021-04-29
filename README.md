@@ -1,6 +1,6 @@
 ## About
 
-This repo contains all that is needed to host and use a server to provide leaderboards in games.
+This repo contains all that is needed to host and use a server providing leaderboards for games.
 
 ## Using the free leaderboard server
 
@@ -14,7 +14,7 @@ If all you want is a free leaderboard in your application download one of the cl
 
 **Create the database file:**
 
-`sqlite3 autction.db '.read create.sql'`
+`sqlite3 leaderboards.db '.read leaderboards.sql'`
 
 **Install the python packages required for the server using pip:**
 
@@ -33,4 +33,4 @@ The itch OAuth link in the index.html has to be changed to one you generate your
 Your webserver also has to redirect urls in the form of your.domain/api to the uvicorn server.
 
 
-(Todo: Make hosting own webinterface easier - Docker?)
+(Todo: Make hosting own webinterface and server easier - Docker?)
