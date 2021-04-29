@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<style>
+html {
+    height: 100%;
+    background: rgb(60,32,88);
+	background: linear-gradient(315deg, rgba(60,32,88,1) 0%, rgba(75,71,195,1) 100%);
+}
+.table_element {
+  border: none;
+  color: white;
+  padding: 15px 20px;
+  display: inline-block;
+  font-size: 16px;
+  margin: 4px 2px;
+  background-color:rgba(.298, .686, .314, 0.3);
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.table_button {
+  cursor: pointer;
+}
+.table_outline {
+  border: 1px solid rgba(255, 255, 255, .5);
+  color: white;
+  padding: 15px 20px;
+  display: inline-block;
+  font-size: 16px;
+  margin: 4px 2px;
+  background-color:rgba(0, 0, 0, 0);
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.content {
+  max-width: 50%;
+  min-width: 500px;
+  margin: auto;
+}
+.header {
+    text-align: center;
+}
+.horizontal_group {
+	display: flex;
+	flex-direction: row;
+}
+
+.button2 {background-color: #008CBA; width: 100%}
+.deleteButton {background-color: #a40000; width: 100px}
+.textLikeButton {background-color: #ffffff; margin: 4px 2px;}
+
+.fade-enter-active, .fade-leave-active {
+  transition: all 0.5s ease;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
+
+</style>
+
+</head>
+
+<body>
+<div class="content">
+
+<div class="header">
+<h1 style="color:white">Score Access Test</h1>
+</div>
+
+<p id="userinfo" style="color:white"></p>
+<p id="status" style="color:white"></p>
+
+<button id="login_button" style="display: none" class="table_element table_button" onclick="window.location.href='https://itch.io/user/oauth?client_id=ebeb9db39a8145ccb3defe5466838533&scope=profile%3Ame&response_type=token&redirect_uri=https%3A%2F%2Fexploitavoid.com%2Fleaderboards%2F';">Login using Itch.io</button>
+
+<div v-if="display" id="leaderboard_panel">
+		<span v-for="leaderboard in leaderboards" v-bind:key="leaderboard.id">
+			<div class="horizontal_group">
+			
+			<button class="table_element table_button" style="flex-grow: 1" v-on:click="open(leaderboard.id)">{{ leaderboard.name }}</span>
+			<button class="table_element table_button" style="width: 1ch" v-on:click="del(leaderboard.id)">X</span>
+			
+			</div>
+		</span>
+		<div class="horizontal_group">
+			<input type="text" v-model="new_leaderboard_name" class="table_element" placeholder="...leaderboard name...">
+			<button class="table_element table_button" v-on:click="create(new_leaderboard_name)">Add Leaderboard</span>
+		</div>
+</div>
+
+<div v-if="display" id="entry_panel">
+
+		<div class="horizontal_group" style="justify-content: space-between">
+			<span class="table_element table_button" v-on:click="back()">Go back to Leaderboards</span>
+			<span class="table_element table_button" v-on:click="showInfo()">Show API Info</span>
+		</div>
+		
+		<div class="horizontal_group">
+			<button class="table_element table_button" style="width: 1ch" v-on:click="previous_entries()"><</button>
+			<input type="text" class="table_element" v-model="searchstring" v-on:change="reload_entries" style="flex-grow: 2" placeholder="...search for name...">
+			<button class="table_element table_button" style="width: 1ch" v-on:click="next_entries()">></button>
+		</div>
+		<span v-for="(entry, index) in entries" v-bind:key="entry.name">
+			<div class="horizontal_group">
+			
+			<span class="table_element" style="width: 25px">{{ entry.position }}.</span>
+			<input type="number" pattern="[0-9]*" v-model="entry.value" class="table_element" style="width: 100px" placeholder="...">
+			<span class="table_element" style="flex-grow: 1; align-items: left">{{ entry.name }}</span>
+			<button class="table_element table_button" style="width: 1ch" v-on:click="del(entry.name)">X</span>
+			
+			</div>
+		</span>
+		<div class="horizontal_group">
+			<input type="number" v-model="new_entry_value" style="width: 168px" class="table_element" placeholder="...value...">
+			<input type="text" v-model="new_entry_name" style="flex-grow: 2" class="table_element" placeholder="...name...">
+			<button class="table_element table_button" style="flex-grow: 1" v-on:click="submit(new_entry_name, new_entry_value)">Add Entry</span>
+		</div>
+</div>
+
+<div v-if="display" id="api_info_panel">
+		<!--<div class="horizontal_group" style="justify-content: space-between">
+			<span class="table_element table_button" v-on:click="back()">Go back to entries</span>
+			<span class="table_element table_button" v-on:click="switch_api_type()">{{ api_type }}</span>
+		</div>-->
+		
+		<div class="horizontal_group" style="justify-content: space-between">
+			<span class="table_element table_button" v-on:click="back()">Go back to entries</span>
+			<select class="table_element" v-model="api_type">
+				<option>GET</option>
+				<!--<option>JSON</option>-->
+			</select>
+		</div>
+		
+		<div class="horizontal_group">
+			<span class="table_element" style="width: 20ch">Leaderboard name:</span>
+			<span class="table_element" style="flex-grow: 1">{{leaderboard.name}}</span>
+		</div>
+		<div class="horizontal_group">
+			<span class="table_element" style="width: 20ch">Leaderboard id:</span>
+			<span class="table_element" style="flex-grow: 1">{{leaderboard.id}}</span>
+		</div>
+		<div class="horizontal_group">
+			<span class="table_element" style="width: 20ch">Leaderboard secret:</span>
+			<span class="table_element" style="flex-grow: 1">{{leaderboard.secret}}</span>
+		</div>
+		
+		<span v-for="info in command_info">
+			<div class="horizontal_group">
+				<span class="table_element" style="flex-grow: 1; overflow-wrap: anywhere">{{ info.url }}<br>{{ info.json }}<br>{{ info.text }}</span>
+			</div>
+			<!--<span class="table_element" style="flex-grow: 1">
+				data:
+				<span class="table_outline" style="flex-grow: 1">{{ info.url }}<br>{{ info.json }}</span>
+			</span>-->
+		</span>
+		
+		<!--<span v-for="command in commands" v-bind:key="command.name">
+			<div class="horizontal_group">
+			
+			<button class="table_element table_button" style="flex-grow: 1">ss</span>
+			<button class="table_element table_button" style="width: 1ch">X</span>
+			
+			</div>
+		</span>-->
+</div>
+
+<img src="loading.png" class="center" id="loading_image">
+
+<!--<div class="horizontal_group">
+<button class="button button2">Create Leaderboard</button>
+<button class="button button3">Delete Leaderboard</button>
+</div>-->
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.0.0/crypto-js.min.js"></script>
+
+<script>
+var commands = [
+	{'name':'submitscoreentry',
+		'arguments':[
+			{'name':'id', 'example':null},{'name':'name', 'example':'steve'},{'name':'value', 'example':500},{'name':'signature', 'example':null}
+		]
+	},
+	{'name':'getscoreentries',
+		'arguments':[
+			{'name':'id', 'example':null},{'name':'start', 'example':0},{'name':'count', 'example':10}
+		]
+	}
+]
+
+var leaderboard_app = new Vue({
+	el: '#leaderboard_panel',
+	data: {
+		display: false,
+		leaderboards: [],
+		new_leaderboard_name: ''
+	},
+	methods: {
+		open: function(id) {
+			entries_app.leaderboard = id;
+			entries_app.reload_entries();
+		},
+		create: function(name) {
+			createLeaderboard(name);
+			this.new_leaderboard_name = '';
+		},
+		del: function(id) {
+			delete_leaderboard(id);
+		}
+	}
+});
+
+var entries_app = new Vue({
+	el: '#entry_panel',
+	data: {
+		display: false,
+		entries: [],
+		leaderboard: -1,
+		searchstring: "",
+		current_entry_index: 1,
+		current_entry_count: 10,
+		new_entry_name: '',
+		new_entry_value: ''
+	},
+	methods: {
+		back: function() {
+			this.current_entry_index = 1;
+			this.searchstring = "";
+			loadLeaderboards();
+		},
+		next_entries: function() {
+			this.current_entry_index += this.current_entry_count;
+			this.reload_entries();
+		},
+		previous_entries: function() {
+			this.current_entry_index -= this.current_entry_count;
+			this.current_entry_index = Math.max(this.current_entry_index, 1);
+			this.reload_entries();
+		},
+		reload_entries: function() {
+			getScoreEntries(this.leaderboard, this.current_entry_index - 1, this.current_entry_count, this.searchstring);
+		},
+		submit: function(name, value) {
+			submit_entry(this.leaderboard, name, value);
+			this.new_entry_name = '';
+			this.new_entry_value = '';
+		},
+		del: function(name) {
+			delete_entry(this.leaderboard, name);
+		},
+		showInfo: function () {
+			api_info_app.leaderboard_id = this.leaderboard;
+			showAPIInfo();
+		}
+	}
+});
+
+var api_info_app = new Vue({
+	el: '#api_info_panel',
+	data: {
+		display: false,
+		leaderboard_id: -1,
+		rootpath: "",
+		leaderboard: [],
+		api_type: "GET",
+		commands: []
+	},
+	methods: {
+		back: function() {
+			entries_app.reload_entries();
+		},
+		switch_api_type: function() {
+			if(this.api_type == "JSON"){
+				this.api_type = "GET";
+			}
+			else if(this.api_type == "GET"){
+				this.api_type = "JSON";
+			}
+		}
+	},
+	computed: {
+		command_info() {
+			var info = [];
+			for (command of this.commands){
+				var commandstring = this.rootpath + command.name + "/";
+				for (argument of command.arguments){
+					var requires_signature = false;
+					commandstring = commandstring + argument.name + "=";
+					if (argument.name == "id"){
+						argument.example = this.leaderboard.id;
+					}
+					else if (argument.name == "signature"){
+						requires_signature = true;
+						var stringtohash = commandstring + this.leaderboard.secret;
+						var hash = CryptoJS.SHA256(stringtohash).toString();
+						argument.example = hash;
+					}
+					commandstring = commandstring + argument.example + "&";
+				}
+				commandstring = commandstring.slice(0, -1);
+				
+				var infotext = "";
+				if(requires_signature){
+					infotext = "Calculate the signature by hashing your url after 'api/' with your leaderboard secret appended, i.e. SHA256('submitscoreentry/...&signature=" + this.leaderboard.secret + "')";
+				}
+				
+				info.push({'url':commandstring, 'json':'', 'text':infotext});
+			}
+			return info;
+		}
+	}
+});
+
+api_info_app.commands = commands;
+
+function constructGetParameters(command) {
+	return "get:" + command.name;
+}
+
+function constructJSON(command) {
+	return "json:" + command.name;
+}
+
+function copyToClipboard(text) {
+	navigator.clipboard.writeText(text);
+}
+
+show_loading_image(false);
+function show_loading_image(show) {
+	var x = document.getElementById("loading_image");
+	if(show){
+		x.style.opacity = 1;
+	}
+	else
+	{
+		x.style.opacity = 0;
+	}
+}
+
+function showAPIInfo() {
+	leaderboard_app.display = false;
+	entries_app.display = false;
+	api_info_app.display = true;
+	var url = document.URL;
+	api_info_app.rootpath = url.substring(0, url.indexOf('#')) + "api/";
+	for (leaderboard of leaderboard_app.leaderboards){
+		if(leaderboard.id == api_info_app.leaderboard_id){
+			api_info_app.leaderboard = leaderboard;
+		}
+	}
+}
+
+function loadLeaderboards() {
+	entries_app.display = false;
+	api_info_app.display = false;
+	document.getElementById("status").innerHTML = "Loading leaderboards...";
+	show_loading_image(true);
+	axios.post('/api/getleaderboards',
+		{ token: accessToken })
+		.then(function(response) {
+			leaderboard_app.leaderboards = response.data;
+			leaderboard_app.display = true;
+			document.getElementById("status").innerHTML = "Here are your leaderboards!";
+			show_loading_image(false);
+		});
+}
+
+function getScoreEntries(leaderboard, index, count, searchstring) {
+	leaderboard_app.display = false;
+	api_info_app.display = false;
+	document.getElementById("status").innerHTML = "Loading Entries...";
+	show_loading_image(true);
+	axios.post('/api/getscoreentries',
+		{ id: leaderboard, start: index, count: count, search: searchstring})
+		.then(function(response) {
+			entries_app.entries = response.data;
+			entries_app.leaderboard = leaderboard;
+			entries_app.display = true;
+			document.getElementById("status").innerHTML = "Here are the entries!";
+			show_loading_image(false);
+		});
+}
+
+function createLeaderboard(name) {
+	document.getElementById("status").innerHTML = "Creating Leaderboard...";
+	show_loading_image(true);
+	axios.post('/api/createleaderboard',
+		{ token: accessToken, name: name })
+		.then(function(response) {
+			loadLeaderboards();
+			show_loading_image(false);
+		});
+}
+
+function delete_leaderboard(id) {
+	show_loading_image(true);
+	document.getElementById("status").innerHTML = "Deleting Leaderboard...";
+	axios.post('/api/deleteleaderboard',
+		{ token: accessToken, id: id })
+		.then(function(response) {
+			loadLeaderboards();
+			show_loading_image(false);
+		});
+}
+
+function submit_entry(leaderboard, name, value) {
+	show_loading_image(true);
+	document.getElementById("status").innerHTML = "Submitting Entry...";
+	axios.post('/api/submitscoreentry',
+		{ token: accessToken, id: leaderboard, name: name, value: value})
+		.then(function(response) {
+			getScoreEntries(leaderboard);
+			show_loading_image(false);
+		});
+}
+
+function delete_entry(leaderboard, name) {
+	show_loading_image(true);
+	document.getElementById("status").innerHTML = "Deleting Entry...";
+	axios.post('/api/deletescoreentry',
+		{ token: accessToken, id: leaderboard, name: name })
+		.then(function(response) {
+			show_loading_image(false);
+			getScoreEntries(leaderboard);
+		});
+}
+
+var queryString = window.location.hash.slice(1);
+var params = new URLSearchParams(queryString);
+var accessToken = params.get("access_token");
+if(accessToken)
+{
+	document.getElementById("status").innerHTML = "Getting Status...";
+	
+	show_loading_image(true);
+	axios.post('/api/getstatus',
+		{ token: accessToken })
+		.then(function(response) {
+			show_loading_image(false);
+			//document.getElementById("userinfo").innerHTML = "Howdy " + response.data.username + "! Your itch-id is " + response.data.id;
+			document.getElementById("userinfo").innerHTML = "Howdy " + response.data.username + "!";
+			loadLeaderboards();
+		});
+}
+else
+{
+	document.getElementById("login_button").style.display = "block";
+	document.getElementById("status").innerHTML = "Please log in!";
+}
+</script>
+
+</body>
+</html>
