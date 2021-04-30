@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends, Body, Request
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Union
 
@@ -11,6 +12,14 @@ import hashlib
 import base64
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 def get_user_info(token: str):
     if token is not None:
