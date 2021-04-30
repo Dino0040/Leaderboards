@@ -1,6 +1,8 @@
-from fastapi import FastAPI, Depends, Body, Request
+from fastapi import FastAPI, Depends, Body, Request, HTTPException
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, ValidationError
 from typing import Union
 
 import requests
@@ -20,6 +22,20 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.exception_handler(HTTPException)
+async def error_exception_handler(request: Request, exc: HTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"error": exc.detail}
+    )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, exc):
+    return JSONResponse(
+        status_code=400,
+        content={"error": str(exc)}
+    )
 
 def get_user_info(token: str):
     if token is not None:
@@ -116,7 +132,6 @@ class CreateLeaderboardParams(BaseModel):
 def create_leaderboard_json(params: CreateLeaderboardParams):
     create_leaderboard_get(params.name, params.token)
 
-#@app.get("/createleaderboard")
 def create_leaderboard_get(name: str, token : str):
     if token is not None:
         userinfo = get_user_info(token)
@@ -139,7 +154,6 @@ class DeleteLeaderboardParams(BaseModel):
 def delete_leaderboard_json(params: DeleteLeaderboardParams):
     delete_leaderboard_get(params.id, params.token)
 
-#@app.get("/deleteleaderboard")
 def delete_leaderboard_get(id: int, token : str):
     if token is not None:
         if user_with_token_owns_leaderboard(token, id):
@@ -151,20 +165,35 @@ def delete_leaderboard(id: int):
     cur.execute('DELETE FROM leaderboard WHERE id = :id;', {"id" : id})
     con.commit()
 
+class SubmitScoreEntryParams(BaseModel):
+    name: str
+    value: float
+    id: int
+
 @app.post("/submitscoreentry")
 async def submit_score_entry_json(request: Request):
     body = await request.body()
     ascii = body.decode('ASCII')
-    print(ascii)
     asciisplit = ascii.rsplit('}', 1)
 
-    params = json.loads(asciisplit[0] + '}')
+    try:
+        params = json.loads(asciisplit[0] + '}')
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=422, detail=e.msg)
+    
+    try:
+        SubmitScoreEntryParams(**params)
+    except ValidationError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    
     hash = asciisplit[1]
 
     if "token" in params:
         if user_with_token_owns_leaderboard(params["token"], params["id"]):
             submit_score_entry(params["name"], params["value"], params["id"])
     else:
+        if(len(hash) == 0):
+            raise HTTPException(status_code=422, detail="Hash is required when not using token")
         secret = get_leaderboard_secret(params["id"])
         tohash = '/submitscoreentry' + asciisplit[0] + '}' + secret
         hasher = hashlib.sha512()
@@ -175,6 +204,8 @@ async def submit_score_entry_json(request: Request):
         needed_hash2 = hasher.digest()
         if hash.lower() == needed_hash.hex().lower() or hash.lower() == needed_hash2.hex().lower():
             submit_score_entry(params["name"], params["value"], params["id"])
+        else:
+            raise HTTPException(status_code=422, detail="Hash is not correct")
         
 def submit_score_entry(name: str, value: int, id: int):
     con = get_connection()
@@ -193,7 +224,6 @@ class DeleteScoreEntryParams(BaseModel):
 def delete_score_entry_json(params: DeleteScoreEntryParams):
     delete_score_entry_get(params.name, params.id, params.token)
 
-#@app.get("/deletescoreentry")
 def delete_score_entry_get(name: str, id: int, token : str):
     if token is not None:
         if user_with_token_owns_leaderboard(token, id):
