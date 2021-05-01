@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, StrictInt, StrictFloat, ValidationError
 from typing import Union
+import sys
 
 import requests, json, sqlite3, random, binascii, hashlib, base64
 
@@ -11,6 +12,7 @@ MAX_LEADERBOARDS_PER_USER = 30
 MAX_ENTRIES_PER_LEADERBOARD = 10000
 
 MAX_NAME_LENGTH = 30
+MAX_VALUE_BYTE_SIZE = 32
 MAX_ENTRIES_RETURNED_PER_REQUEST = 30
 
 
@@ -211,6 +213,9 @@ async def submit_score_entry_json(request: Request):
     
     if(len(params.name) > MAX_NAME_LENGTH):
         raise HTTPException(status_code=422, detail="Name is exceeding max length of " + str(MAX_NAME_LENGTH))
+        
+    if(sys.getsizeof(params.value) > MAX_VALUE_BYTE_SIZE):
+        raise HTTPException(status_code=422, detail="Value is exceeding max size in bytes of " + str(MAX_VALUE_BYTE_SIZE))
     
     # This will need to be changed later on to delete the lower scores instead of blocking new ones
     if(leaderboard_is_full(params.id)):
