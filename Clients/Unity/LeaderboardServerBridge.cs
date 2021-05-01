@@ -10,13 +10,13 @@ using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Networking;
 
-public class HighscoreServerBridge : MonoBehaviour
+public class LeaderboardServerBridge : MonoBehaviour
 {
     public string serverEndpoint = "https://exploitavoid.com/api";
     public int leaderboardID = 15;
     public string leaderboardSecret = "3f2981858c7ff90dd6eaffc4a93589cc";
     
-    public async Task<List<HighscoreEntry>> GetHighscoreEntries(int start, int count)
+    public async Task<List<LeaderboardEntry>> RequestEntries(int start, int count)
     {
         string url = serverEndpoint + $"/getscoreentries?id={leaderboardID}&start={start}&count={count}";
         using (UnityWebRequest unityWebRequest = UnityWebRequest.Get(url))
@@ -30,14 +30,14 @@ public class HighscoreServerBridge : MonoBehaviour
                     Debug.LogError(unityWebRequest.error);
                     break;
                 case UnityWebRequest.Result.Success:
-                    List<HighscoreEntry> scores = deserializeJson<List<HighscoreEntry>>(unityWebRequest.downloadHandler.text);
+                    List<LeaderboardEntry> scores = DeserializeJson<List<LeaderboardEntry>>(unityWebRequest.downloadHandler.text);
                     return scores;
             }
         }
         return null;
     }
 
-    public async Task<HighscoreEntry> GetHighscoreForUser(string name)
+    public async Task<LeaderboardEntry> RequestUserEntry(string name)
     {
         string url = serverEndpoint + $"/getscoreentries?id={leaderboardID}&start=1&count=1&search={name}";
         using (UnityWebRequest unityWebRequest = UnityWebRequest.Get(url))
@@ -51,24 +51,27 @@ public class HighscoreServerBridge : MonoBehaviour
                     Debug.LogError(unityWebRequest.error);
                     break;
                 case UnityWebRequest.Result.Success:
-                    List <HighscoreEntry> scores = deserializeJson<List<HighscoreEntry>>(unityWebRequest.downloadHandler.text);
-                    HighscoreEntry entry = scores[0];
-                    return entry;
+                    List <LeaderboardEntry> scores = DeserializeJson<List<LeaderboardEntry>>(unityWebRequest.downloadHandler.text);
+                    if(scores != null && scores.Count > 0)
+                    {
+                        return scores[0];
+                    }
+                    return null;
             }
         }
         return null;
     }
 
-    public async Task<bool> UploadHighscore(string name, float score)
+    public async Task<bool> SendUserValue(string name, float value)
     {
         string url = serverEndpoint + "/submitscoreentry";
 
-        string uploadJson = $"{{\"name\":\"{name}\", \"value\":{score}, \"id\":{leaderboardID}}}";
+        string uploadJson = $"{{\"name\":\"{name}\", \"value\":{value}, \"id\":{leaderboardID}}}";
         string toHash = "/submitscoreentry" + uploadJson + leaderboardSecret;
 
         byte[] utfBytes = Encoding.UTF8.GetBytes(toHash);
         byte[] result;
-        SHA512 shaM = new SHA512Managed();
+        SHA256 shaM = new SHA256Managed();
         result = shaM.ComputeHash(utfBytes);
 
         string hashString = BitConverter.ToString(result).Replace("-", "");
@@ -94,19 +97,18 @@ public class HighscoreServerBridge : MonoBehaviour
         return false;
     }
 
-    public static T deserializeJson<T>(string result)
+    T DeserializeJson<T>(string result)
     {
         DataContractJsonSerializer jsonSer = new DataContractJsonSerializer(typeof(T));
-        using (MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(result)))
+        using MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(result))
         {
-            ms.Position = 0;
-            return (T)jsonSer.ReadObject(ms);
-        }
+            Position = 0
+        };
+        return (T)jsonSer.ReadObject(ms);
     }
-
 }
 
-public static class WebRequestExtension
+public static class WebRequestAsyncExtension
 {
     public static Task<AsyncOperation> SendWebRequestAsync(this UnityWebRequest unityWebRequest)
     {
@@ -117,12 +119,12 @@ public static class WebRequestExtension
 }
 
 [DataContract]
-public class HighscoreEntry
+public class LeaderboardEntry
 {
     [DataMember]
     public string name;
     [DataMember(Name = "value")]
-    public float score;
+    public float value;
     [DataMember]
     public int position;
 }
