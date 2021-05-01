@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends, Body, Request, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, StrictInt, StrictFloat, ValidationError
 from typing import Union
 
 import requests, json, sqlite3, random, binascii, hashlib, base64
@@ -189,8 +189,9 @@ def delete_leaderboard(id: int):
 
 class SubmitScoreEntryParams(BaseModel):
     name: str
-    value: float
+    value: Union[StrictInt, StrictFloat, float]
     id: int
+    token: Union[str, None]
 
 @app.post("/submitscoreentry")
 async def submit_score_entry_json(request: Request):
@@ -199,31 +200,31 @@ async def submit_score_entry_json(request: Request):
     asciisplit = ascii.rsplit('}', 1)
 
     try:
-        params = json.loads(asciisplit[0] + '}')
+        json_params = json.loads(asciisplit[0] + '}')
     except json.JSONDecodeError as e:
         raise HTTPException(status_code=422, detail=e.msg)
     
     try:
-        SubmitScoreEntryParams(**params)
+        params = SubmitScoreEntryParams(**json_params)
     except ValidationError as e:
         raise HTTPException(status_code=422, detail=str(e))
     
-    if(len(params["name"]) > MAX_NAME_LENGTH):
+    if(len(params.name) > MAX_NAME_LENGTH):
         raise HTTPException(status_code=422, detail="Name is exceeding max length of " + str(MAX_NAME_LENGTH))
     
     # This will need to be changed later on to delete the lower scores instead of blocking new ones
-    if(leaderboard_is_full(params["id"])):
+    if(leaderboard_is_full(params.id)):
         raise HTTPException(status_code=422, detail="The leaderboard has reached the maximum size of " + str(MAX_ENTRIES_PER_LEADERBOARD))
     
     hash = asciisplit[1]
 
-    if "token" in params:
-        if user_with_token_owns_leaderboard(params["token"], params["id"]):
-            submit_score_entry(params["name"], params["value"], params["id"])
+    if params.token is not None:
+        if user_with_token_owns_leaderboard(params.token, params.id):
+            submit_score_entry(params.name, params.value, params.id)
     else:
         if(len(hash) == 0):
             raise HTTPException(status_code=422, detail="Hash is required when not using token")
-        secret = get_leaderboard_secret(params["id"])
+        secret = get_leaderboard_secret(params.id)
         tohash = '/submitscoreentry' + asciisplit[0] + '}' + secret
         hasher = hashlib.sha512()
         hasher.update(tohash.encode('utf-8'))
@@ -232,11 +233,11 @@ async def submit_score_entry_json(request: Request):
         hasher.update(tohash.encode('utf-8'))
         needed_hash2 = hasher.digest()
         if hash.lower() == needed_hash.hex().lower() or hash.lower() == needed_hash2.hex().lower():
-            submit_score_entry(params["name"], params["value"], params["id"])
+            submit_score_entry(params.name, params.value, params.id)
         else:
             raise HTTPException(status_code=422, detail="Hash is not correct")
         
-def submit_score_entry(name: str, value: int, id: int):
+def submit_score_entry(name: str, value: Union[int, float], id: int):
     con = get_connection()
     cur = con.cursor()
     cur.execute('INSERT INTO entry(name, value, leaderboard) VALUES(:name, :value, :id) ' +
