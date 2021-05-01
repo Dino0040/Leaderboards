@@ -5,13 +5,14 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ValidationError
 from typing import Union
 
-import requests
-import json
-import sqlite3
-import random
-import binascii
-import hashlib
-import base64
+import requests, json, sqlite3, random, binascii, hashlib, base64
+
+MAX_LEADERBOARDS_PER_USER = 30
+MAX_ENTRIES_PER_LEADERBOARD = 10000
+
+MAX_NAME_LENGTH = 30
+MAX_ENTRIES_RETURNED_PER_REQUEST = 30
+
 
 app = FastAPI()
 
@@ -63,6 +64,23 @@ def get_leaderboard_secret(id : int):
         {"id" : id})
     leaderboard = cur.fetchone()
     return leaderboard["secret"]
+    
+def leaderboard_is_full(id : int):
+    con = get_connection()
+    cur = con.cursor()
+    cur.execute("SELECT COUNT(1) AS count FROM entry WHERE leaderboard == :id",
+        {"id" : id})
+    count_table = cur.fetchone()
+    return count_table["count"] >= MAX_ENTRIES_PER_LEADERBOARD
+    
+def has_maximum_number_of_leaderboards(owner : int):
+    con = get_connection()
+    cur = con.cursor()
+    cur.execute("SELECT COUNT(1) AS count FROM leaderboard WHERE owner == :owner",
+        {"owner" : owner})
+    count_table = cur.fetchone()
+    return count_table["count"] >= MAX_LEADERBOARDS_PER_USER
+
 
 def get_connection():
     con = sqlite3.connect('leaderboards.db')
@@ -110,6 +128,8 @@ def get_score_entries_get(id: int, start: int = 0, count: int = 10, search: str 
     return get_score_entries(id, start, count, search)
 
 def get_score_entries(id: int, start: int = 0, count: int = 10, search: str = ""):
+    if count > MAX_ENTRIES_RETURNED_PER_REQUEST:
+        count = MAX_ENTRIES_RETURNED_PER_REQUEST
     con = get_connection()
     cur = con.cursor()
     scorequery = ("SELECT name, value, ROW_NUMBER ()"
@@ -138,6 +158,8 @@ def create_leaderboard_get(name: str, token : str):
         create_leaderboard(name, userinfo["id"])
 
 def create_leaderboard(name: str, userid: int):
+    if has_maximum_number_of_leaderboards(userid):
+        raise HTTPException(status_code=422, detail="The maximum amount of leaderboards (" + str(MAX_LEADERBOARDS_PER_USER) + ") for this user has been reached")
     secret = '%x' % random.getrandbits(128)
     con = get_connection()
     cur = con.cursor()
@@ -185,6 +207,13 @@ async def submit_score_entry_json(request: Request):
         SubmitScoreEntryParams(**params)
     except ValidationError as e:
         raise HTTPException(status_code=422, detail=str(e))
+    
+    if(len(params["name"]) > MAX_NAME_LENGTH):
+        raise HTTPException(status_code=422, detail="Name is exceeding max length of " + str(MAX_NAME_LENGTH))
+    
+    # This will need to be changed later on to delete the lower scores instead of blocking new ones
+    if(leaderboard_is_full(params["id"])):
+        raise HTTPException(status_code=422, detail="The leaderboard has reached the maximum size of " + str(MAX_ENTRIES_PER_LEADERBOARD))
     
     hash = asciisplit[1]
 
