@@ -9,10 +9,10 @@ import sys
 import requests, json, sqlite3, random, binascii, hashlib, base64
 
 MAX_LEADERBOARDS_PER_USER = 30
-MAX_ENTRIES_PER_LEADERBOARD = 10000
+MAX_ENTRIES_PER_LEADERBOARD = 5000
 
 MAX_NAME_LENGTH = 30
-MAX_VALUE_BYTE_SIZE = 32
+MAX_VALUE_BYTES = 4
 MAX_ENTRIES_RETURNED_PER_REQUEST = 30
 
 
@@ -211,14 +211,15 @@ async def submit_score_entry_json(request: Request):
     except ValidationError as e:
         raise HTTPException(status_code=422, detail=str(e))
     
-    if(len(params.name) > MAX_NAME_LENGTH):
+    if len(params.name) > MAX_NAME_LENGTH:
         raise HTTPException(status_code=422, detail="Name is exceeding max length of " + str(MAX_NAME_LENGTH))
-        
-    if(sys.getsizeof(params.value) > MAX_VALUE_BYTE_SIZE):
-        raise HTTPException(status_code=422, detail="Value is exceeding max size in bytes of " + str(MAX_VALUE_BYTE_SIZE))
+    
+    max_int = pow(2, MAX_VALUE_BYTES * 8)//2-1
+    if abs(params.value) > max_int:
+        raise HTTPException(status_code=422, detail="Value is exceeding max size of +-" + str(max_int) + " (" + str(MAX_VALUE_BYTES) + " byte signed integer)")
     
     # This will need to be changed later on to delete the lower scores instead of blocking new ones
-    if(leaderboard_is_full(params.id)):
+    if leaderboard_is_full(params.id):
         raise HTTPException(status_code=422, detail="The leaderboard has reached the maximum size of " + str(MAX_ENTRIES_PER_LEADERBOARD))
     
     hash = asciisplit[1]
@@ -227,7 +228,7 @@ async def submit_score_entry_json(request: Request):
         if user_with_token_owns_leaderboard(params.token, params.id):
             submit_score_entry(params.name, params.value, params.id)
     else:
-        if(len(hash) == 0):
+        if len(hash) == 0:
             raise HTTPException(status_code=422, detail="Hash is required when not using token")
         secret = get_leaderboard_secret(params.id)
         tohash = '/submitscoreentry' + asciisplit[0] + '}' + secret
