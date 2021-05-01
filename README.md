@@ -6,6 +6,10 @@ This repo contains all that is needed to host and use a server providing leaderb
 
 If all you want is a free leaderboard in your application download one of the client implementations for your game engine and log in using itch.io on [this page](https://exploitavoid.com/leaderboards/) to create and manage your leaderboards.
 
+*DISCLAMER: I will use the public server myself for future jam games so have the intention to keep it up for as long as I can with as few outages as possible, but there are no guarantees. To prevent abuse the MAX_\* rate limits defined in the main.py of the repo are in place - be nice!*
+
+The API is currently under heavy development and may change in drastic ways. Either host your own server or wait for the first stable release if you can not live with breaking changes.
+
 ## Hosting a leaderboard server yourself
 
 **Install the required packages using your package manager:**
