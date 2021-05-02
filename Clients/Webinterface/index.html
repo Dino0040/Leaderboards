@@ -70,13 +70,13 @@ html {
 <div class="content">
 
 <div class="header">
-<h1 style="color:white">Score Access Test</h1>
+<h1 id="title" style="color:white"></h1>
 </div>
 
 <p id="userinfo" style="color:white"></p>
 <p id="status" style="color:white"></p>
 
-<button id="login_button" style="display: none" class="table_element table_button" onclick="window.location.href='https://itch.io/user/oauth?client_id=ebeb9db39a8145ccb3defe5466838533&scope=profile%3Ame&response_type=token&redirect_uri=https%3A%2F%2Fexploitavoid.com%2Fleaderboards%2F';">Login using Itch.io</button>
+<button id="login_button" style="display: none" class="table_element table_button" onclick="window.location.href=OAUTHLINK;">Login using Itch.io</button>
 
 <div v-if="display" id="leaderboard_panel">
 		<span v-for="leaderboard in leaderboards" v-bind:key="leaderboard.id">
@@ -177,11 +177,15 @@ html {
 </div>-->
 </div>
 
+<script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.0.0/crypto-js.min.js"></script>
 
 <script>
+
+document.getElementById("title").innerHTML = PAGETITLE;
+
 var commands = [
 	{'name':'submitscoreentry',
 		'arguments':[
