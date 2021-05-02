@@ -13,8 +13,8 @@ using UnityEngine.Networking;
 public class LeaderboardServerBridge : MonoBehaviour
 {
     public string serverEndpoint = "https://exploitavoid.com/api";
-    public int leaderboardID = 15;
-    public string leaderboardSecret = "3f2981858c7ff90dd6eaffc4a93589cc";
+    public int leaderboardID = 3;
+    public string leaderboardSecret = "656433a96b56132affbfde59758acc44";
     
     public async Task<List<LeaderboardEntry>> RequestEntries(int start, int count)
     {

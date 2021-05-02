@@ -1,8 +1,8 @@
 extends Node
 
 var server_endpoint = "https://exploitavoid.com/api"
-var leaderboard_id = 15
-var leaderboard_secret = "3f2981858c7ff90dd6eaffc4a93589cc"
+var leaderboard_id = 3
+var leaderboard_secret = "656433a96b56132affbfde59758acc44"
 
 signal on_received_entries(was_success, entries)
 signal on_received_user_entry(was_success, entry)
