@@ -85,7 +85,7 @@ def has_maximum_number_of_leaderboards(owner : int):
 
 
 def get_connection():
-    con = sqlite3.connect('leaderboards.db')
+    con = sqlite3.connect('./database/leaderboards.db')
     con.row_factory = sqlite3.Row
     return con
 
