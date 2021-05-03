@@ -10,31 +10,18 @@ If all you want is a free leaderboard in your application download one of the cl
 
 The API is currently under heavy development and may change in drastic ways. Either host your own server or wait for the first stable release if you can not live with breaking changes.
 
-## Hosting a leaderboard server yourself
+## Hosting a leaderboard server yourself using docker
 
-**Install the required packages using your package manager:**
+**Create the leaderboard container in the /Server folder:**
+`docker build -t leaderboard .`
+**Start the leaderboard container with port 80 exposed to the host (We will connect the webinterface to the same network):**
+`docker run -d -p 80:80 --name leaderboard leaderboard`
+**Modify the OAuth link and page title:**
+The OAUTHLINK in /Client/Webinterface/config.js has to be changed to one you generate yourself using [their site](https://itch.io/user/settings/oauth-apps).
+Change the PAGETITLE in the same file.
+**Create the webinterface container in the /Client/Webinterface folder:**
+`docker build -t webinterface .`
+**Start the webinterface container connected to the network of the leaderboard container):**
+`docker run -d --network container:leaderboard --name webinterface webinterface`
 
-`apt install sqlite3 python3 python3-pip`
-
-**Create the database file:**
-
-`sqlite3 leaderboards.db '.read leaderboards.sql'`
-
-**Install the python packages required for the server using pip:**
-
-`pip install fastapi requests uvicorn`
-
-(You can replace uvicorn with any other ASGI server)
-
-**Start the server:**
-
-`uvicorn main:app`
-
-**Host the webinterface Clients/index.html using any webserver**
-
-The itch OAuth link in the index.html has to be changed to one you generate yourself using [their site](https://itch.io/user/settings/oauth-apps).
-
-Your webserver also has to redirect urls in the form of your.domain/api to the uvicorn server.
-
-
-(Todo: Make hosting own webinterface and server easier - Docker?)
+Your webinterface is now available at http://<span></span>127.0.0.1/ and the server at http://<span></span>127.0.0.1/api/ of the host
