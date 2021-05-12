@@ -123,17 +123,8 @@ html {
 </div>
 
 <div v-if="display" id="api_info_panel">
-		<!--<div class="horizontal_group" style="justify-content: space-between">
-			<span class="table_element table_button" v-on:click="back()">Go back to entries</span>
-			<span class="table_element table_button" v-on:click="switch_api_type()">{{ api_type }}</span>
-		</div>-->
-		
 		<div class="horizontal_group" style="justify-content: space-between">
 			<span class="table_element table_button" v-on:click="back()">Go back to entries</span>
-			<select class="table_element" v-model="api_type">
-				<option>GET</option>
-				<!--<option>JSON</option>-->
-			</select>
 		</div>
 		
 		<div class="horizontal_group">
@@ -148,33 +139,10 @@ html {
 			<span class="table_element" style="width: 20ch">Leaderboard secret:</span>
 			<span class="table_element" style="flex-grow: 1">{{leaderboard.secret}}</span>
 		</div>
-		
-		<span v-for="info in command_info">
-			<div class="horizontal_group">
-				<span class="table_element" style="flex-grow: 1; overflow-wrap: anywhere">{{ info.url }}<br>{{ info.json }}<br>{{ info.text }}</span>
-			</div>
-			<!--<span class="table_element" style="flex-grow: 1">
-				data:
-				<span class="table_outline" style="flex-grow: 1">{{ info.url }}<br>{{ info.json }}</span>
-			</span>-->
-		</span>
-		
-		<!--<span v-for="command in commands" v-bind:key="command.name">
-			<div class="horizontal_group">
-			
-			<button class="table_element table_button" style="flex-grow: 1">ss</span>
-			<button class="table_element table_button" style="width: 1ch">X</span>
-			
-			</div>
-		</span>-->
 </div>
 
 <img src="loading.png" class="center" id="loading_image">
 
-<!--<div class="horizontal_group">
-<button class="button button2">Create Leaderboard</button>
-<button class="button button3">Delete Leaderboard</button>
-</div>-->
 </div>
 
 <script src="config.js"></script>
@@ -185,19 +153,6 @@ html {
 <script>
 
 document.getElementById("title").innerHTML = PAGETITLE;
-
-var commands = [
-	{'name':'submitscoreentry',
-		'arguments':[
-			{'name':'id', 'example':null},{'name':'name', 'example':'steve'},{'name':'value', 'example':500},{'name':'signature', 'example':null}
-		]
-	},
-	{'name':'getscoreentries',
-		'arguments':[
-			{'name':'id', 'example':null},{'name':'start', 'example':0},{'name':'count', 'example':10}
-		]
-	}
-]
 
 var leaderboard_app = new Vue({
 	el: '#leaderboard_panel',
@@ -274,7 +229,6 @@ var api_info_app = new Vue({
 		rootpath: "",
 		leaderboard: [],
 		api_type: "GET",
-		commands: []
 	},
 	methods: {
 		back: function() {
@@ -288,41 +242,8 @@ var api_info_app = new Vue({
 				this.api_type = "JSON";
 			}
 		}
-	},
-	computed: {
-		command_info() {
-			var info = [];
-			for (command of this.commands){
-				var commandstring = this.rootpath + command.name + "/";
-				for (argument of command.arguments){
-					var requires_signature = false;
-					commandstring = commandstring + argument.name + "=";
-					if (argument.name == "id"){
-						argument.example = this.leaderboard.id;
-					}
-					else if (argument.name == "signature"){
-						requires_signature = true;
-						var stringtohash = commandstring + this.leaderboard.secret;
-						var hash = CryptoJS.SHA256(stringtohash).toString();
-						argument.example = hash;
-					}
-					commandstring = commandstring + argument.example + "&";
-				}
-				commandstring = commandstring.slice(0, -1);
-				
-				var infotext = "";
-				if(requires_signature){
-					infotext = "Calculate the signature by hashing your url after 'api/' with your leaderboard secret appended, i.e. SHA256('submitscoreentry/...&signature=" + this.leaderboard.secret + "')";
-				}
-				
-				info.push({'url':commandstring, 'json':'', 'text':infotext});
-			}
-			return info;
-		}
 	}
 });
-
-api_info_app.commands = commands;
 
 function constructGetParameters(command) {
 	return "get:" + command.name;
@@ -448,8 +369,7 @@ if(accessToken)
 		{ token: accessToken })
 		.then(function(response) {
 			show_loading_image(false);
-			//document.getElementById("userinfo").innerHTML = "Howdy " + response.data.username + "! Your itch-id is " + response.data.id;
-			document.getElementById("userinfo").innerHTML = "Howdy " + response.data.username + "!";
+			document.getElementById("userinfo").innerHTML = "Howdy " + response.data.username + "! Your itch-id is " + response.data.id + ".";
 			loadLeaderboards();
 		});
 }
