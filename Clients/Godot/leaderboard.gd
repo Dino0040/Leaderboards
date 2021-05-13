@@ -26,20 +26,20 @@ func _ready():
 	send_user_value_http_request.connect("request_completed", self, "_handle_sent_user_value")
 	
 func request_entries(start, count):
-	var url = server_endpoint + "/getscoreentries?id={0}&start={1}&count={2}"
+	var url = server_endpoint + "/get_entries?leaderboard_id={0}&start={1}&count={2}"
 	url = url.format([leaderboard_id,start,count])
 	request_entries_http_request.request(url)
 	
 func request_user_entry(name):
-	var url = server_endpoint + "/getscoreentries?id={0}&start=1&count=1&search={1}"
+	var url = server_endpoint + "/get_entries?leaderboard_id={0}&start=1&count=1&search={1}"
 	url = url.format([leaderboard_id,name])
 	request_user_entry_http_request.request(url)
 	
 func send_user_value(name, value):
-	var url = server_endpoint + "/submitscoreentry"
-	var upload_json = "{\"name\":\"{0}\", \"value\":{1}, \"id\":{2}}";
+	var url = server_endpoint + "/update_entry"
+	var upload_json = "{\"name\":\"{0}\", \"value\":{1}, \"leaderboard_id\":{2}}";
 	upload_json = upload_json.format([name, value, leaderboard_id])
-	var to_hash = "/submitscoreentry" + upload_json + leaderboard_secret;
+	var to_hash = "/update_entry" + upload_json + leaderboard_secret;
 	var ctx = HashingContext.new()
 	ctx.start(HashingContext.HASH_SHA256)
 	ctx.update(to_hash.to_utf8())

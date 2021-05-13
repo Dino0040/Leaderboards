@@ -89,21 +89,21 @@ def get_connection():
     con.row_factory = sqlite3.Row
     return con
 
-@app.post("/getstatus")
+@app.post("/get_account_status")
 def get_status_json(token: str = Body(..., embed=True)):
     return get_status_get(token)
 
-@app.get("/getstatus")
+@app.get("/get_account_status")
 def get_status_get(token: str):
     userinfo = get_user_info(token)
     if userinfo is not None:
         return {"username":userinfo["username"], "id":userinfo["id"]}
 
-@app.post("/getleaderboards")
+@app.post("/get_leaderboards")
 def get_leaderboards_json(token: str = Body(..., embed=True)):
     return get_leaderboards_get(token)
 
-@app.get("/getleaderboards")
+@app.get("/get_leaderboards")
 def get_leaderboards_get(token: str):
     userinfo = get_user_info(token)
     if userinfo is not None:
@@ -115,21 +115,21 @@ def get_leaderboards(owner: int):
     cur.execute('SELECT * FROM leaderboard WHERE owner == :owner', {"owner" : owner})
     return (cur.fetchall())
 
-class GetScoreEntriesParams(BaseModel):
+class GetEntriesParams(BaseModel):
     id: int
     start: int = 0
     count: int = 10
     search: str = ""
 
-@app.post("/getscoreentries")
-def get_score_entries_json(params: GetScoreEntriesParams):
-    return get_score_entries(params.id, params.start, params.count, params.search)
+@app.post("/get_entries")
+def get_entries_json(params: GetEntriesParams):
+    return get_entries(params.id, params.start, params.count, params.search)
 
-@app.get("/getscoreentries")
-def get_score_entries_get(id: int, start: int = 0, count: int = 10, search: str = ""):
-    return get_score_entries(id, start, count, search)
+@app.get("/get_entries")
+def get_entries_get(id: int, start: int = 0, count: int = 10, search: str = ""):
+    return get_entries(id, start, count, search)
 
-def get_score_entries(id: int, start: int = 0, count: int = 10, search: str = ""):
+def get_entries(id: int, start: int = 0, count: int = 10, search: str = ""):
     if count > MAX_ENTRIES_RETURNED_PER_REQUEST:
         count = MAX_ENTRIES_RETURNED_PER_REQUEST
     con = get_connection()
@@ -150,14 +150,11 @@ class CreateLeaderboardParams(BaseModel):
     name: str
     token: str
 
-@app.post("/createleaderboard")
+@app.post("/create_leaderboard")
 def create_leaderboard_json(params: CreateLeaderboardParams):
-    create_leaderboard_get(params.name, params.token)
-
-def create_leaderboard_get(name: str, token : str):
-    if token is not None:
-        userinfo = get_user_info(token)
-        create_leaderboard(name, userinfo["id"])
+    if params.token is not None:
+        userinfo = get_user_info(params.token)
+        create_leaderboard(params.name, userinfo["id"])
 
 def create_leaderboard(name: str, userid: int):
     if has_maximum_number_of_leaderboards(userid):
@@ -174,14 +171,11 @@ class DeleteLeaderboardParams(BaseModel):
     id: int
     token: str
 
-@app.post("/deleteleaderboard")
+@app.post("/delete_leaderboard")
 def delete_leaderboard_json(params: DeleteLeaderboardParams):
-    delete_leaderboard_get(params.id, params.token)
-
-def delete_leaderboard_get(id: int, token : str):
-    if token is not None:
-        if user_with_token_owns_leaderboard(token, id):
-            delete_leaderboard(id)
+    if params.token is not None:
+        if user_with_token_owns_leaderboard(params.token, params.id):
+            delete_leaderboard(params.id)
 
 def delete_leaderboard(id: int):
     con = get_connection()
@@ -189,14 +183,14 @@ def delete_leaderboard(id: int):
     cur.execute('DELETE FROM leaderboard WHERE id = :id;', {"id" : id})
     con.commit()
 
-class SubmitScoreEntryParams(BaseModel):
+class UpdateEntryParams(BaseModel):
     name: str
     value: Union[StrictInt, StrictFloat, float]
     id: int
     token: Union[str, None]
 
-@app.post("/submitscoreentry")
-async def submit_score_entry_json(request: Request):
+@app.post("/update_entry")
+async def update_entry_json(request: Request):
     body = await request.body()
     ascii = body.decode('ASCII')
     asciisplit = ascii.rsplit('}', 1)
@@ -207,7 +201,7 @@ async def submit_score_entry_json(request: Request):
         raise HTTPException(status_code=422, detail=e.msg)
     
     try:
-        params = SubmitScoreEntryParams(**json_params)
+        params = UpdateEntryParams(**json_params)
     except ValidationError as e:
         raise HTTPException(status_code=422, detail=str(e))
     
@@ -226,12 +220,12 @@ async def submit_score_entry_json(request: Request):
 
     if params.token is not None:
         if user_with_token_owns_leaderboard(params.token, params.id):
-            submit_score_entry(params.name, params.value, params.id)
+            update_entry(params.name, params.value, params.id)
     else:
         if len(hash) == 0:
             raise HTTPException(status_code=422, detail="Hash is required when not using token")
         secret = get_leaderboard_secret(params.id)
-        tohash = '/submitscoreentry' + asciisplit[0] + '}' + secret
+        tohash = '/submitEntry' + asciisplit[0] + '}' + secret
         hasher = hashlib.sha512()
         hasher.update(tohash.encode('utf-8'))
         needed_hash = hasher.digest()
@@ -239,11 +233,11 @@ async def submit_score_entry_json(request: Request):
         hasher.update(tohash.encode('utf-8'))
         needed_hash2 = hasher.digest()
         if hash.lower() == needed_hash.hex().lower() or hash.lower() == needed_hash2.hex().lower():
-            submit_score_entry(params.name, params.value, params.id)
+            update_entry(params.name, params.value, params.id)
         else:
             raise HTTPException(status_code=422, detail="Hash is not correct")
         
-def submit_score_entry(name: str, value: Union[int, float], id: int):
+def update_entry(name: str, value: Union[int, float], id: int):
     con = get_connection()
     cur = con.cursor()
     cur.execute('INSERT INTO entry(name, value, leaderboard) VALUES(:name, :value, :id) ' +
@@ -251,21 +245,18 @@ def submit_score_entry(name: str, value: Union[int, float], id: int):
         {"name" : name, "value" : value, "id" : id})
     con.commit()
 
-class DeleteScoreEntryParams(BaseModel):
+class DeleteEntryParams(BaseModel):
     name: str
     id: int
     token: str
 
-@app.post("/deletescoreentry")
-def delete_score_entry_json(params: DeleteScoreEntryParams):
-    delete_score_entry_get(params.name, params.id, params.token)
+@app.post("/delete_entry")
+def delete_entry_json(params: DeleteEntryParams):
+    if params.token is not None:
+        if user_with_token_owns_leaderboard(params.token, params.id):
+            delete_entry(params.name, params.id)
 
-def delete_score_entry_get(name: str, id: int, token : str):
-    if token is not None:
-        if user_with_token_owns_leaderboard(token, id):
-            delete_score_entry(name, id)
-
-def delete_score_entry(name: str, id: int):
+def delete_entry(name: str, id: int):
     con = get_connection()
     cur = con.cursor()
     cur.execute("DELETE FROM entry WHERE leaderboard = :id AND name = :name;",

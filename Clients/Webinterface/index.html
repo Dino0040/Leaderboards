@@ -15,7 +15,7 @@ html {
   display: inline-block;
   font-size: 16px;
   margin: 4px 2px;
-  background-color:rgba(.298, .686, .314, 0.3);
+  background-color:rgba(0, 0, 0, 0.2);
   border-radius: 5px;
   display: flex;
   align-items: center;
@@ -23,6 +23,12 @@ html {
 }
 .table_button {
   cursor: pointer;
+}
+.interactable {
+  background-color:rgba(0, 0, 0, 0.3);
+}
+.selected_outline {
+  border: 1px solid rgba(255, 255, 255, 1);
 }
 .table_outline {
   border: 1px solid rgba(255, 255, 255, .5);
@@ -37,7 +43,9 @@ html {
   align-items: center;
   justify-content: center;
 }
-
+input::placeholder{
+  color: rgba(255, 255, 255, 0.7);
+}
 .contact_link {
   color: white;
   position:fixed;
@@ -95,55 +103,55 @@ html {
 		<span v-for="leaderboard in leaderboards" v-bind:key="leaderboard.id">
 			<div class="horizontal_group">
 			
-			<button class="table_element table_button" style="flex-grow: 1" v-on:click="open(leaderboard.id)">{{ leaderboard.name }}</span>
-			<button class="table_element table_button" style="width: 1ch" v-on:click="del(leaderboard.id)">X</span>
+			<button class="table_element table_button interactable" style="flex-grow: 1" v-on:click="open(leaderboard.id)">{{ leaderboard.name }}</span>
+			<button class="table_element table_button interactable" style="width: 1ch" v-on:click="del(leaderboard.id)">X</span>
 			
 			</div>
 		</span>
 		<div class="horizontal_group">
-			<input type="text" v-model="new_leaderboard_name" class="table_element" placeholder="...leaderboard name...">
-			<button class="table_element table_button" v-on:click="create(new_leaderboard_name)">Add Leaderboard</span>
+			<input type="text" v-model="new_leaderboard_name" class="table_element interactable" placeholder="...leaderboard name...">
+			<button class="table_element table_button interactable" v-on:click="create(new_leaderboard_name)">Add Leaderboard</span>
 		</div>
 </div>
 
 <div v-if="display" id="entry_panel">
 
 		<div class="horizontal_group" style="justify-content: space-between">
-			<span class="table_element table_button" v-on:click="back()">Go back to Leaderboards</span>
-			<span class="table_element table_button" v-on:click="showInfo()">Show API Info</span>
+			<span class="table_element table_button interactable" v-on:click="back()">Go back to Leaderboards</span>
+			<span class="table_element table_button interactable" v-on:click="showInfo()">API Info / Settings</span>
 		</div>
 		
 		<div class="horizontal_group">
-			<button class="table_element table_button" style="width: 1ch" v-on:click="previous_entries()"><</button>
-			<input type="text" class="table_element" v-model="searchstring" v-on:change="reload_entries" style="flex-grow: 2" placeholder="...search for name...">
-			<button class="table_element table_button" style="width: 1ch" v-on:click="next_entries()">></button>
+			<button class="table_element table_button interactable" style="width: 1ch" v-on:click="previous_entries()"><</button>
+			<input type="text" class="table_element interactable" v-model="searchstring" v-on:change="reload_entries" style="flex-grow: 2" placeholder="...search for name...">
+			<button class="table_element table_button interactable" style="width: 1ch" v-on:click="next_entries()">></button>
 		</div>
 		<span v-for="(entry, index) in entries" v-bind:key="entry.name">
 			<div class="horizontal_group">
 			
 			<span class="table_element" style="width: 25px">{{ entry.position }}.</span>
-			<input type="number" pattern="[0-9]*" v-model="entry.value" class="table_element" style="width: 100px" placeholder="...">
+			<span class="table_element" style="width: 100px">{{ entry.value }}</span>
 			<span class="table_element" style="flex-grow: 1; align-items: left">{{ entry.name }}</span>
-			<button class="table_element table_button" style="width: 1ch" v-on:click="del(entry.name)">X</span>
+			<button class="table_element table_button interactable" style="width: 1ch" v-on:click="del(entry.name)">X</span>
 			
 			</div>
 		</span>
 		<div class="horizontal_group">
-			<input type="number" v-model="new_entry_value" style="width: 168px" class="table_element" placeholder="...value...">
-			<input type="text" v-model="new_entry_name" style="flex-grow: 2" class="table_element" placeholder="...name...">
-			<button class="table_element table_button" style="flex-grow: 1" v-on:click="submit(new_entry_name, new_entry_value)">Add Entry</span>
+			<input type="number" v-model="new_entry_value" style="width: 168px" class="table_element interactable" placeholder="...value...">
+			<input type="text" v-model="new_entry_name" style="flex-grow: 2" class="table_element interactable" placeholder="...name...">
+			<button class="table_element table_button interactable" style="flex-grow: 1" v-on:click="submit(new_entry_name, new_entry_value)">Add Entry</span>
 		</div>
 </div>
 
 <div v-if="display" id="api_info_panel">
 		<div class="horizontal_group" style="justify-content: space-between">
-			<span class="table_element table_button" v-on:click="back()">Go back to entries</span>
+			<span class="table_element table_button interactable" v-on:click="back()">Go back to entries</span>
 		</div>
 		
 		<div class="horizontal_group">
-			<span class="table_element" style="width: 20ch">Leaderboard name:</span>
-			<span class="table_element" style="flex-grow: 1">{{leaderboard.name}}</span>
+			<span class="table_element" style="flex-grow: 1">API Info</span>
 		</div>
+		
 		<div class="horizontal_group">
 			<span class="table_element" style="width: 20ch">Leaderboard id:</span>
 			<span class="table_element" style="flex-grow: 1">{{leaderboard.id}}</span>
@@ -151,6 +159,22 @@ html {
 		<div class="horizontal_group">
 			<span class="table_element" style="width: 20ch">Leaderboard secret:</span>
 			<span class="table_element" style="flex-grow: 1">{{leaderboard.secret}}</span>
+		</div>
+		
+		<div class="horizontal_group">
+			<span class="table_element" style="flex-grow: 1">Settings</span>
+		</div>
+		
+		<div class="horizontal_group">
+			<span class="table_element table_button interactable" style="flex-grow: 1" v-bind:class="{ selected_outline: leaderboard.sorting == 'd' }" v-on:click="change_sorting('d')">Highest Value First</span>
+			<span class="table_element table_button interactable" style="flex-grow: 1" v-bind:class="{ selected_outline: leaderboard.sorting == 'a' }" v-on:click="change_sorting('a')">Lowest Value First</span>
+			<span class="table_element table_button interactable" style="flex-grow: 1" v-bind:class="{ selected_outline: leaderboard.sorting == 'n' }" v-on:click="change_sorting('n')">No Sorting</span>
+		</div>
+		
+		<div class="horizontal_group">
+			<span class="table_element" style="flex-grow: 1">{{leaderboard.name}}</span>
+			<input type="text" v-model="new_leaderboard_name" style="flex-grow: 2" class="table_element interactable" placeholder="...new name...">
+			<button class="table_element table_button interactable" style="flex-grow: 1" v-on:click="rename(new_leaderboard_name)">Rename</span>
 		</div>
 </div>
 
@@ -243,34 +267,21 @@ var api_info_app = new Vue({
 		leaderboard_id: -1,
 		rootpath: "",
 		leaderboard: [],
-		api_type: "GET",
+		new_leaderboard_name: ''
 	},
 	methods: {
 		back: function() {
 			entries_app.reload_entries();
 		},
-		switch_api_type: function() {
-			if(this.api_type == "JSON"){
-				this.api_type = "GET";
-			}
-			else if(this.api_type == "GET"){
-				this.api_type = "JSON";
-			}
+		rename: function(name) {
+		    set_leaderboard_name(this.leaderboard_id, name)
+			this.new_leaderboard_name = '';
+		},
+		change_sorting: function(sorting) {
+		    set_leaderboard_sorting(this.leaderboard_id, sorting);
 		}
 	}
 });
-
-function constructGetParameters(command) {
-	return "get:" + command.name;
-}
-
-function constructJSON(command) {
-	return "json:" + command.name;
-}
-
-function copyToClipboard(text) {
-	navigator.clipboard.writeText(text);
-}
 
 show_loading_image(false);
 function show_loading_image(show) {
@@ -302,7 +313,7 @@ function loadLeaderboards() {
 	api_info_app.display = false;
 	document.getElementById("status").innerHTML = "Loading leaderboards...";
 	show_loading_image(true);
-	axios.post('/api/getleaderboards',
+	axios.post('/api/get_leaderboards',
 		{ token: accessToken })
 		.then(function(response) {
 			leaderboard_app.leaderboards = response.data;
@@ -312,16 +323,16 @@ function loadLeaderboards() {
 		});
 }
 
-function getScoreEntries(leaderboard, index, count, searchstring) {
+function getScoreEntries(leaderboard_id, index, count, searchstring) {
 	leaderboard_app.display = false;
 	api_info_app.display = false;
 	document.getElementById("status").innerHTML = "Loading Entries...";
 	show_loading_image(true);
-	axios.post('/api/getscoreentries',
-		{ id: leaderboard, start: index, count: count, search: searchstring})
+	axios.post('/api/get_entries',
+		{ leaderboard_id: leaderboard_id, start: index, count: count, search: searchstring})
 		.then(function(response) {
 			entries_app.entries = response.data;
-			entries_app.leaderboard = leaderboard;
+			entries_app.leaderboard = leaderboard_id;
 			entries_app.display = true;
 			document.getElementById("status").innerHTML = "Here are the entries!";
 			show_loading_image(false);
@@ -331,7 +342,7 @@ function getScoreEntries(leaderboard, index, count, searchstring) {
 function createLeaderboard(name) {
 	document.getElementById("status").innerHTML = "Creating Leaderboard...";
 	show_loading_image(true);
-	axios.post('/api/createleaderboard',
+	axios.post('/api/create_leaderboard',
 		{ token: accessToken, name: name })
 		.then(function(response) {
 			loadLeaderboards();
@@ -342,7 +353,7 @@ function createLeaderboard(name) {
 function delete_leaderboard(id) {
 	show_loading_image(true);
 	document.getElementById("status").innerHTML = "Deleting Leaderboard...";
-	axios.post('/api/deleteleaderboard',
+	axios.post('/api/delete_leaderboard',
 		{ token: accessToken, id: id })
 		.then(function(response) {
 			loadLeaderboards();
@@ -350,25 +361,47 @@ function delete_leaderboard(id) {
 		});
 }
 
-function submit_entry(leaderboard, name, value) {
+function set_leaderboard_name(id, name) {
 	show_loading_image(true);
-	document.getElementById("status").innerHTML = "Submitting Entry...";
-	axios.post('/api/submitscoreentry',
-		{ token: accessToken, id: leaderboard, name: name, value: value})
+	document.getElementById("status").innerHTML = "Renaming Leaderboard...";
+	axios.post('/api/set_leaderboard_name',
+		{ token: accessToken, id: id, name: name})
 		.then(function(response) {
-			getScoreEntries(leaderboard);
+			loadLeaderboards();
 			show_loading_image(false);
 		});
 }
 
-function delete_entry(leaderboard, name) {
+function set_leaderboard_sorting(id, sorting) {
+	show_loading_image(true);
+	document.getElementById("status").innerHTML = "Changing Sorting Mode...";
+	axios.post('/api/set_leaderboard_sorting',
+		{ token: accessToken, id: id, sorting: sorting})
+		.then(function(response) {
+			loadLeaderboards();
+			show_loading_image(false);
+		});
+}
+
+function submit_entry(leaderboard_id, name, value) {
+	show_loading_image(true);
+	document.getElementById("status").innerHTML = "Submitting Entry...";
+	axios.post('/api/update_entry',
+		{ token: accessToken, leaderboard_id: leaderboard_id, name: name, value: value})
+		.then(function(response) {
+			getScoreEntries(leaderboard_id);
+			show_loading_image(false);
+		});
+}
+
+function delete_entry(leaderboard_id, name) {
 	show_loading_image(true);
 	document.getElementById("status").innerHTML = "Deleting Entry...";
-	axios.post('/api/deletescoreentry',
-		{ token: accessToken, id: leaderboard, name: name })
+	axios.post('/api/delete_entry',
+		{ token: accessToken, leaderboard_id: leaderboard_id, name: name })
 		.then(function(response) {
 			show_loading_image(false);
-			getScoreEntries(leaderboard);
+			getScoreEntries(leaderboard_id);
 		});
 }
 
@@ -380,7 +413,7 @@ if(accessToken)
 	document.getElementById("status").innerHTML = "Getting Status...";
 	
 	show_loading_image(true);
-	axios.post('/api/getstatus',
+	axios.post('/api/get_account_status',
 		{ token: accessToken })
 		.then(function(response) {
 			show_loading_image(false);

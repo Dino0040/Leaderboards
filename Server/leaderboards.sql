@@ -1,5 +1,6 @@
 PRAGMA foreign_keys=OFF;
 BEGIN TRANSACTION;
-CREATE TABLE leaderboard ( "id" INTEGER PRIMARY KEY, "secret" TEXT NOT NULL, "owner" INTEGER NOT NULL, "name" TEXT);
-CREATE TABLE IF NOT EXISTS "entry" ( "name" TEXT NOT NULL, "value" NUMERIC NOT NULL, "leaderboard" INTEGER NOT NULL, time INTEGER NOT NULL DEFAULT 0, FOREIGN KEY ("leaderboard") REFERENCES leaderboard ("id"), PRIMARY KEY("name", "leaderboard"));
+CREATE TABLE "ban" ("itch_user_id" INTEGER PRIMARY KEY, "ban_reason" TEXT NOT NULL);
+CREATE TABLE "leaderboard" ( "id" INTEGER PRIMARY KEY, "secret" TEXT NOT NULL, "itch_user_id" INTEGER NOT NULL, "name" TEXT, "sorting" TEXT DEFAULT "d");
+CREATE TABLE "entry" ( "name" TEXT NOT NULL, "value" NUMERIC NOT NULL, "leaderboard_id" INTEGER NOT NULL, FOREIGN KEY ("leaderboard_id") REFERENCES leaderboard ("id"), PRIMARY KEY("name", "leaderboard_id"));
 COMMIT;

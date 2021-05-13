@@ -15,10 +15,10 @@ public class LeaderboardServerBridge : MonoBehaviour
     public string serverEndpoint = "https://exploitavoid.com/api";
     public int leaderboardID = 3;
     public string leaderboardSecret = "656433a96b56132affbfde59758acc44";
-    
+
     public async Task<List<LeaderboardEntry>> RequestEntries(int start, int count)
     {
-        string url = serverEndpoint + $"/getscoreentries?id={leaderboardID}&start={start}&count={count}";
+        string url = serverEndpoint + $"/get_entries?leaderboard_id={leaderboardID}&start={start}&count={count}";
         using (UnityWebRequest unityWebRequest = UnityWebRequest.Get(url))
         {
             await unityWebRequest.SendWebRequestAsync();
@@ -28,6 +28,7 @@ public class LeaderboardServerBridge : MonoBehaviour
                 case UnityWebRequest.Result.DataProcessingError:
                 case UnityWebRequest.Result.ProtocolError:
                     Debug.LogError(unityWebRequest.error);
+                    Debug.LogError(unityWebRequest.downloadHandler.text);
                     break;
                 case UnityWebRequest.Result.Success:
                     List<LeaderboardEntry> scores = DeserializeJson<List<LeaderboardEntry>>(unityWebRequest.downloadHandler.text);
@@ -39,7 +40,7 @@ public class LeaderboardServerBridge : MonoBehaviour
 
     public async Task<LeaderboardEntry> RequestUserEntry(string name)
     {
-        string url = serverEndpoint + $"/getscoreentries?id={leaderboardID}&start=1&count=1&search={name}";
+        string url = serverEndpoint + $"/get_entries?leaderboard_id={leaderboardID}&start=1&count=1&search={name}";
         using (UnityWebRequest unityWebRequest = UnityWebRequest.Get(url))
         {
             await unityWebRequest.SendWebRequestAsync();
@@ -49,10 +50,11 @@ public class LeaderboardServerBridge : MonoBehaviour
                 case UnityWebRequest.Result.DataProcessingError:
                 case UnityWebRequest.Result.ProtocolError:
                     Debug.LogError(unityWebRequest.error);
+                    Debug.LogError(unityWebRequest.downloadHandler.text);
                     break;
                 case UnityWebRequest.Result.Success:
-                    List <LeaderboardEntry> scores = DeserializeJson<List<LeaderboardEntry>>(unityWebRequest.downloadHandler.text);
-                    if(scores != null && scores.Count > 0)
+                    List<LeaderboardEntry> scores = DeserializeJson<List<LeaderboardEntry>>(unityWebRequest.downloadHandler.text);
+                    if (scores != null && scores.Count > 0)
                     {
                         return scores[0];
                     }
@@ -64,10 +66,10 @@ public class LeaderboardServerBridge : MonoBehaviour
 
     public async Task<bool> SendUserValue(string name, float value)
     {
-        string url = serverEndpoint + "/submitscoreentry";
+        string url = serverEndpoint + "/update_entry";
 
-        string uploadJson = $"{{\"name\":\"{name}\", \"value\":{value}, \"id\":{leaderboardID}}}";
-        string toHash = "/submitscoreentry" + uploadJson + leaderboardSecret;
+        string uploadJson = $"{{\"name\":\"{name}\", \"value\":{value}, \"leaderboard_id\":{leaderboardID}}}";
+        string toHash = "/update_entry" + uploadJson + leaderboardSecret;
 
         byte[] utfBytes = Encoding.UTF8.GetBytes(toHash);
         byte[] result;
@@ -89,6 +91,7 @@ public class LeaderboardServerBridge : MonoBehaviour
                 case UnityWebRequest.Result.DataProcessingError:
                 case UnityWebRequest.Result.ProtocolError:
                     Debug.LogError(unityWebRequest.error);
+                    Debug.LogError(unityWebRequest.downloadHandler.text);
                     break;
                 case UnityWebRequest.Result.Success:
                     return true;
@@ -123,7 +126,7 @@ public class LeaderboardEntry
 {
     [DataMember]
     public string name;
-    [DataMember(Name = "value")]
+    [DataMember]
     public float value;
     [DataMember]
     public int position;
