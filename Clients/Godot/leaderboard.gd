@@ -1,7 +1,7 @@
 # warning-ignore-all:return_value_discarded
 extends Node
 
-var server_endpoint = "https://exploitavoid.com/api"
+var server_endpoint = "https://exploitavoid.com/leaderboards/v1/api"
 var leaderboard_id = 3
 var leaderboard_secret = "656433a96b56132affbfde59758acc44"
 

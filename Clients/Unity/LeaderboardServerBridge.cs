@@ -11,7 +11,7 @@ using UnityEngine.Networking;
 
 public class LeaderboardServerBridge : MonoBehaviour
 {
-    public string serverEndpoint = "https://exploitavoid.com/api";
+    public string serverEndpoint = "https://exploitavoid.com/leaderboards/v1/api";
     public int leaderboardID = 3;
     public string leaderboardSecret = "656433a96b56132affbfde59758acc44";
 

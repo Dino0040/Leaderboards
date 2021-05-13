@@ -300,7 +300,7 @@ function showAPIInfo() {
 	entries_app.display = false;
 	api_info_app.display = true;
 	var url = document.URL;
-	api_info_app.rootpath = url.substring(0, url.indexOf('#')) + "api/";
+	api_info_app.rootpath = url.substring(0, url.indexOf('#')) + "/leaderboards/v1/api/";
 	for (leaderboard of leaderboard_app.leaderboards){
 		if(leaderboard.id == api_info_app.leaderboard_id){
 			api_info_app.leaderboard = leaderboard;
@@ -313,7 +313,7 @@ function loadLeaderboards() {
 	api_info_app.display = false;
 	document.getElementById("status").innerHTML = "Loading leaderboards...";
 	show_loading_image(true);
-	axios.post('/api/get_leaderboards',
+	axios.post('/leaderboards/v1/api/get_leaderboards',
 		{ token: accessToken })
 		.then(function(response) {
 			leaderboard_app.leaderboards = response.data;
@@ -328,7 +328,7 @@ function getScoreEntries(leaderboard_id, index, count, searchstring) {
 	api_info_app.display = false;
 	document.getElementById("status").innerHTML = "Loading Entries...";
 	show_loading_image(true);
-	axios.post('/api/get_entries',
+	axios.post('/leaderboards/v1/api/get_entries',
 		{ leaderboard_id: leaderboard_id, start: index, count: count, search: searchstring})
 		.then(function(response) {
 			entries_app.entries = response.data;
@@ -342,7 +342,7 @@ function getScoreEntries(leaderboard_id, index, count, searchstring) {
 function createLeaderboard(name) {
 	document.getElementById("status").innerHTML = "Creating Leaderboard...";
 	show_loading_image(true);
-	axios.post('/api/create_leaderboard',
+	axios.post('/leaderboards/v1/api/create_leaderboard',
 		{ token: accessToken, name: name })
 		.then(function(response) {
 			loadLeaderboards();
@@ -353,7 +353,7 @@ function createLeaderboard(name) {
 function delete_leaderboard(id) {
 	show_loading_image(true);
 	document.getElementById("status").innerHTML = "Deleting Leaderboard...";
-	axios.post('/api/delete_leaderboard',
+	axios.post('/leaderboards/v1/api/delete_leaderboard',
 		{ token: accessToken, id: id })
 		.then(function(response) {
 			loadLeaderboards();
@@ -364,7 +364,7 @@ function delete_leaderboard(id) {
 function set_leaderboard_name(id, name) {
 	show_loading_image(true);
 	document.getElementById("status").innerHTML = "Renaming Leaderboard...";
-	axios.post('/api/set_leaderboard_name',
+	axios.post('/leaderboards/v1/api/set_leaderboard_name',
 		{ token: accessToken, id: id, name: name})
 		.then(function(response) {
 			loadLeaderboards();
@@ -375,7 +375,7 @@ function set_leaderboard_name(id, name) {
 function set_leaderboard_sorting(id, sorting) {
 	show_loading_image(true);
 	document.getElementById("status").innerHTML = "Changing Sorting Mode...";
-	axios.post('/api/set_leaderboard_sorting',
+	axios.post('/leaderboards/v1/api/set_leaderboard_sorting',
 		{ token: accessToken, id: id, sorting: sorting})
 		.then(function(response) {
 			loadLeaderboards();
@@ -386,7 +386,7 @@ function set_leaderboard_sorting(id, sorting) {
 function submit_entry(leaderboard_id, name, value) {
 	show_loading_image(true);
 	document.getElementById("status").innerHTML = "Submitting Entry...";
-	axios.post('/api/update_entry',
+	axios.post('/leaderboards/v1/api/update_entry',
 		{ token: accessToken, leaderboard_id: leaderboard_id, name: name, value: value})
 		.then(function(response) {
 			getScoreEntries(leaderboard_id);
@@ -397,7 +397,7 @@ function submit_entry(leaderboard_id, name, value) {
 function delete_entry(leaderboard_id, name) {
 	show_loading_image(true);
 	document.getElementById("status").innerHTML = "Deleting Entry...";
-	axios.post('/api/delete_entry',
+	axios.post('/leaderboards/v1/api/delete_entry',
 		{ token: accessToken, leaderboard_id: leaderboard_id, name: name })
 		.then(function(response) {
 			show_loading_image(false);
@@ -413,7 +413,7 @@ if(accessToken)
 	document.getElementById("status").innerHTML = "Getting Status...";
 	
 	show_loading_image(true);
-	axios.post('/api/get_account_status',
+	axios.post('/leaderboards/v1/api/get_account_status',
 		{ token: accessToken })
 		.then(function(response) {
 			show_loading_image(false);
