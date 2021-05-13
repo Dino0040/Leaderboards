@@ -3,7 +3,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, StrictInt, StrictFloat, ValidationError
-from typing import Union
+from enum import Enum
+from typing import Union, Optional
 import sys
 
 import requests, json, sqlite3, random, binascii, hashlib, base64
@@ -47,39 +48,55 @@ def get_user_info(token: str):
         return parsed.get("user")
     return None
 
-def user_owns_leaderboard(user: int, id: int):
+def user_owns_leaderboard(user: int, leaderboard_id: int):
     con = get_connection()
     cur = con.cursor()
-    cur.execute("SELECT * FROM leaderboard WHERE id == :id",
-        {"id" : id})
+    cur.execute("SELECT * FROM leaderboard WHERE id == :leaderboard_id",
+        {"leaderboard_id" : leaderboard_id})
     leaderboard = cur.fetchone()
-    return leaderboard["owner"] == user
+    if leaderboard is None:
+        return False
+    return leaderboard["itch_user_id"] == user
 
-def user_with_token_owns_leaderboard(token: str, id: int):
+def user_with_token_owns_leaderboard(token: str, leaderboard_id: int):
     userinfo = get_user_info(token)
-    return user_owns_leaderboard(userinfo["id"], id)
+    if userinfo is None:
+        return False
+    return user_owns_leaderboard(userinfo["id"], leaderboard_id)
 
-def get_leaderboard_secret(id : int):
+def get_leaderboard_secret(leaderboard_id : int):
     con = get_connection()
     cur = con.cursor()
-    cur.execute("SELECT * FROM leaderboard WHERE id == :id",
-        {"id" : id})
+    cur.execute("SELECT * FROM leaderboard WHERE id == :leaderboard_id",
+        {"leaderboard_id" : leaderboard_id})
     leaderboard = cur.fetchone()
+    if leaderboard is None:
+        raise HTTPException(status_code=422, detail="There is no leaderboard with the id " + str(leaderboard_id))
     return leaderboard["secret"]
     
-def leaderboard_is_full(id : int):
+def get_leaderboard_sorting(leaderboard_id : int):
     con = get_connection()
     cur = con.cursor()
-    cur.execute("SELECT COUNT(1) AS count FROM entry WHERE leaderboard == :id",
-        {"id" : id})
+    cur.execute("SELECT * FROM leaderboard WHERE id == :leaderboard_id",
+        {"leaderboard_id" : leaderboard_id})
+    leaderboard = cur.fetchone()
+    if leaderboard is None:
+        raise HTTPException(status_code=422, detail="There is no leaderboard with the id " + str(leaderboard_id))
+    return leaderboard["sorting"]
+    
+def leaderboard_is_full(leaderboard_id : int):
+    con = get_connection()
+    cur = con.cursor()
+    cur.execute("SELECT COUNT(1) AS count FROM entry WHERE leaderboard_id == :leaderboard_id",
+        {"leaderboard_id" : leaderboard_id})
     count_table = cur.fetchone()
     return count_table["count"] >= MAX_ENTRIES_PER_LEADERBOARD
     
-def has_maximum_number_of_leaderboards(owner : int):
+def has_maximum_number_of_leaderboards(itch_user_id : int):
     con = get_connection()
     cur = con.cursor()
-    cur.execute("SELECT COUNT(1) AS count FROM leaderboard WHERE owner == :owner",
-        {"owner" : owner})
+    cur.execute("SELECT COUNT(1) AS count FROM leaderboard WHERE itch_user_id == :itch_user_id",
+        {"itch_user_id" : itch_user_id})
     count_table = cur.fetchone()
     return count_table["count"] >= MAX_LEADERBOARDS_PER_USER
 
@@ -109,41 +126,46 @@ def get_leaderboards_get(token: str):
     if userinfo is not None:
         return get_leaderboards(userinfo["id"])
 
-def get_leaderboards(owner: int):
+def get_leaderboards(itch_user_id: int):
     con = get_connection()
     cur = con.cursor()
-    cur.execute('SELECT * FROM leaderboard WHERE owner == :owner', {"owner" : owner})
+    cur.execute('SELECT * FROM leaderboard WHERE itch_user_id == :itch_user_id', {"itch_user_id" : itch_user_id})
     return (cur.fetchall())
 
 class GetEntriesParams(BaseModel):
-    id: int
+    leaderboard_id: int
     start: int = 0
     count: int = 10
     search: str = ""
 
 @app.post("/get_entries")
 def get_entries_json(params: GetEntriesParams):
-    return get_entries(params.id, params.start, params.count, params.search)
+    return get_entries(params.leaderboard_id, params.start, params.count, params.search)
 
 @app.get("/get_entries")
-def get_entries_get(id: int, start: int = 0, count: int = 10, search: str = ""):
-    return get_entries(id, start, count, search)
+def get_entries_get(leaderboard_id: int, start: int = 0, count: int = 10, search: str = ""):
+    return get_entries(leaderboard_id, start, count, search)
 
-def get_entries(id: int, start: int = 0, count: int = 10, search: str = ""):
+def get_entries(leaderboard_id: int, start: int = 0, count: int = 10, search: str = ""):
     if count > MAX_ENTRIES_RETURNED_PER_REQUEST:
         count = MAX_ENTRIES_RETURNED_PER_REQUEST
+    sorting = get_leaderboard_sorting(leaderboard_id);
+    position_query = {
+        "a": "ROW_NUMBER () OVER ( ORDER BY value ASC ) position",
+        "d": "ROW_NUMBER () OVER ( ORDER BY value DESC ) position",
+        "n": "0 AS position"
+    }
     con = get_connection()
     cur = con.cursor()
-    scorequery = ("SELECT name, value, ROW_NUMBER ()"
-        " OVER ( ORDER BY value DESC ) position FROM"
-        " entry WHERE leaderboard == :id")
+    scorequery = ("SELECT name, value, " + position_query[sorting] + " FROM"
+        " entry WHERE leaderboard_id == :leaderboard_id")
     limitquery = " LIMIT :count OFFSET :start"
     if search != "":
         wholequery = "SELECT * FROM ( " + scorequery + " ) WHERE name LIKE :search" + limitquery
     else:
         wholequery = scorequery + limitquery
     start = start - 1
-    cur.execute(wholequery, {"id" : id, "start" : start, "count" : count, "search" : search})
+    cur.execute(wholequery, {"leaderboard_id" : leaderboard_id, "start" : start, "count" : count, "search" : search})
     return (cur.fetchall())
 
 class CreateLeaderboardParams(BaseModel):
@@ -152,9 +174,10 @@ class CreateLeaderboardParams(BaseModel):
 
 @app.post("/create_leaderboard")
 def create_leaderboard_json(params: CreateLeaderboardParams):
-    if params.token is not None:
-        userinfo = get_user_info(params.token)
-        create_leaderboard(params.name, userinfo["id"])
+    if len(params.name) > MAX_NAME_LENGTH:
+        raise HTTPException(status_code=422, detail="Name is exceeding max length of " + str(MAX_NAME_LENGTH))
+    userinfo = get_user_info(params.token)
+    create_leaderboard(params.name, userinfo["id"])
 
 def create_leaderboard(name: str, userid: int):
     if has_maximum_number_of_leaderboards(userid):
@@ -162,9 +185,50 @@ def create_leaderboard(name: str, userid: int):
     secret = '%x' % random.getrandbits(128)
     con = get_connection()
     cur = con.cursor()
-    cur.execute(('INSERT INTO leaderboard(secret, owner, name)'
+    cur.execute(('INSERT INTO leaderboard(secret, itch_user_id, name)'
         ' VALUES(:secret, :userid, :name)'),
         {"secret" : secret, "userid" : userid, "name" : name})
+    con.commit()
+
+class SortingEnum(str, Enum):
+    ascending = 'a'
+    descending = 'd'
+    none = 'n'
+
+class SetLeaderboardSortingParams(BaseModel):
+    id: int
+    token: str
+    sorting: SortingEnum
+
+@app.post("/set_leaderboard_sorting")
+def set_leaderboard_sorting_json(params: SetLeaderboardSortingParams):
+    if user_with_token_owns_leaderboard(params.token, params.id):
+        set_leaderboard_sorting(params.id, params.sorting)
+
+def set_leaderboard_sorting(id: int, sorting: SortingEnum):
+    con = get_connection()
+    cur = con.cursor()
+    cur.execute("UPDATE leaderboard SET sorting = :sorting WHERE id = :id;",
+        {"id" : id, "sorting" : sorting})
+    con.commit()
+    
+class SetLeaderboardNameParams(BaseModel):
+    id: int
+    token: str
+    name: str
+
+@app.post("/set_leaderboard_name")
+def set_leaderboard_name_json(params: SetLeaderboardNameParams):
+    if len(params.name) > MAX_NAME_LENGTH:
+        raise HTTPException(status_code=422, detail="Name is exceeding max length of " + str(MAX_NAME_LENGTH))
+    if user_with_token_owns_leaderboard(params.token, params.id):
+        set_leaderboard_name(params.id, params.name)
+
+def set_leaderboard_name(id: int, name: str):
+    con = get_connection()
+    cur = con.cursor()
+    cur.execute("UPDATE leaderboard SET name = :name WHERE id = :id;",
+        {"id" : id, "name": name})
     con.commit()
 
 class DeleteLeaderboardParams(BaseModel):
@@ -186,7 +250,7 @@ def delete_leaderboard(id: int):
 class UpdateEntryParams(BaseModel):
     name: str
     value: Union[StrictInt, StrictFloat, float]
-    id: int
+    leaderboard_id: int
     token: Union[str, None]
 
 @app.post("/update_entry")
@@ -213,19 +277,19 @@ async def update_entry_json(request: Request):
         raise HTTPException(status_code=422, detail="Value is exceeding max size of +-" + str(max_int) + " (" + str(MAX_VALUE_BYTES) + " byte signed integer)")
     
     # This will need to be changed later on to delete the lower scores instead of blocking new ones
-    if leaderboard_is_full(params.id):
+    if leaderboard_is_full(params.leaderboard_id):
         raise HTTPException(status_code=422, detail="The leaderboard has reached the maximum size of " + str(MAX_ENTRIES_PER_LEADERBOARD))
     
     hash = asciisplit[1]
 
     if params.token is not None:
-        if user_with_token_owns_leaderboard(params.token, params.id):
-            update_entry(params.name, params.value, params.id)
+        if user_with_token_owns_leaderboard(params.token, params.leaderboard_id):
+            update_entry(params.name, params.value, params.leaderboard_id)
     else:
         if len(hash) == 0:
             raise HTTPException(status_code=422, detail="Hash is required when not using token")
-        secret = get_leaderboard_secret(params.id)
-        tohash = '/submitEntry' + asciisplit[0] + '}' + secret
+        secret = get_leaderboard_secret(params.leaderboard_id)
+        tohash = '/update_entry' + asciisplit[0] + '}' + secret
         hasher = hashlib.sha512()
         hasher.update(tohash.encode('utf-8'))
         needed_hash = hasher.digest()
@@ -233,32 +297,38 @@ async def update_entry_json(request: Request):
         hasher.update(tohash.encode('utf-8'))
         needed_hash2 = hasher.digest()
         if hash.lower() == needed_hash.hex().lower() or hash.lower() == needed_hash2.hex().lower():
-            update_entry(params.name, params.value, params.id)
+            update_entry(params.name, params.value, params.leaderboard_id)
         else:
             raise HTTPException(status_code=422, detail="Hash is not correct")
         
-def update_entry(name: str, value: Union[int, float], id: int):
+def update_entry(name: str, value: Union[int, float], leaderboard_id: int):
+    sorting = get_leaderboard_sorting(leaderboard_id);
+    override_mode = {
+        "a": "<",
+        "d": ">",
+        "n": "<>"
+    }
     con = get_connection()
     cur = con.cursor()
-    cur.execute('INSERT INTO entry(name, value, leaderboard) VALUES(:name, :value, :id) ' +
-        'ON CONFLICT(name, leaderboard) DO UPDATE SET value=excluded.value WHERE excluded.value>value;',
-        {"name" : name, "value" : value, "id" : id})
+    cur.execute('INSERT INTO entry(name, value, leaderboard_id) VALUES(:name, :value, :leaderboard_id) ' +
+        'ON CONFLICT(name, leaderboard_id) DO UPDATE SET value=excluded.value WHERE excluded.value ' + override_mode[sorting] + ' value;',
+        {"name" : name, "value" : value, "leaderboard_id" : leaderboard_id})
     con.commit()
 
 class DeleteEntryParams(BaseModel):
     name: str
-    id: int
+    leaderboard_id: int
     token: str
 
 @app.post("/delete_entry")
 def delete_entry_json(params: DeleteEntryParams):
     if params.token is not None:
-        if user_with_token_owns_leaderboard(params.token, params.id):
-            delete_entry(params.name, params.id)
+        if user_with_token_owns_leaderboard(params.token, params.leaderboard_id):
+            delete_entry(params.name, params.leaderboard_id)
 
-def delete_entry(name: str, id: int):
+def delete_entry(name: str, leaderboard_id: int):
     con = get_connection()
     cur = con.cursor()
-    cur.execute("DELETE FROM entry WHERE leaderboard = :id AND name = :name;",
-        {"id" : id, "name" : name})
+    cur.execute("DELETE FROM entry WHERE leaderboard_id = :leaderboard_id AND name = :name;",
+        {"leaderboard_id" : leaderboard_id, "name" : name})
     con.commit()
