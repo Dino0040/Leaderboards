@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization;
@@ -64,11 +63,26 @@ public class LeaderboardServerBridge : MonoBehaviour
         return null;
     }
 
-    public async Task<bool> SendUserValue(string name, float value)
+    public Task<bool> SendUserValue(string name, int value)
+    {
+        return SendUserValue(name, (IConvertible)value);
+    }
+
+    public Task<bool> SendUserValue(string name, float value)
+    {
+        return SendUserValue(name, (IConvertible)value);
+    }
+
+    public Task<bool> SendUserValue(string name, double value)
+    {
+        return SendUserValue(name, (IConvertible)value);
+    }
+
+    async Task<bool> SendUserValue(string name, IConvertible value)
     {
         string url = serverEndpoint + "/update_entry";
-
-        string uploadJson = $"{{\"name\":\"{name}\", \"value\":{value}, \"leaderboard_id\":{leaderboardID}}}";
+        string valueString = value.ToString();
+        string uploadJson = $"{{\"name\":\"{name}\", \"value\":{valueString}, \"leaderboard_id\":{leaderboardID}}}";
         string toHash = "/update_entry" + uploadJson + leaderboardSecret;
 
         byte[] utfBytes = Encoding.UTF8.GetBytes(toHash);
@@ -125,9 +139,38 @@ public static class WebRequestAsyncExtension
 public class LeaderboardEntry
 {
     [DataMember]
-    public string name;
+    readonly public string name;
+    [DataMember(Name = "value")]
+    readonly private string _value;
     [DataMember]
-    public float value;
-    [DataMember]
-    public int position;
+    readonly public int position;
+
+    // If you want to parse the value yourself
+    // The backend does not support strings as values
+    public string GetValueAsString()
+    {
+        return _value;
+    }
+
+    public int GetValueAsInt()
+    {
+        if(int.TryParse(_value, out int result))
+        {
+            return result;
+        }
+        else
+        {
+            return (int)Math.Round(GetValueAsDouble());
+        }
+    }
+
+    public float GetValueAsFloat()
+    {
+        return float.Parse(_value);
+    }
+
+    public double GetValueAsDouble()
+    {
+        return double.Parse(_value);
+    }
 }
