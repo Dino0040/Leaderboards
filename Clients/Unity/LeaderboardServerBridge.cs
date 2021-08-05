@@ -92,7 +92,7 @@ public class LeaderboardServerBridge : MonoBehaviour
 
         string hashString = BitConverter.ToString(result).Replace("-", "");
 
-        byte[] rawBytes = Encoding.ASCII.GetBytes(uploadJson + hashString);
+        byte[] rawBytes = Encoding.UTF8.GetBytes(uploadJson + hashString);
 
         DownloadHandlerBuffer d = new DownloadHandlerBuffer();
         UploadHandlerRaw u = new UploadHandlerRaw(rawBytes);
@@ -117,11 +117,13 @@ public class LeaderboardServerBridge : MonoBehaviour
     T DeserializeJson<T>(string result)
     {
         DataContractJsonSerializer jsonSer = new DataContractJsonSerializer(typeof(T));
-        using MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(result))
+        using (MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(result))
         {
             Position = 0
-        };
-        return (T)jsonSer.ReadObject(ms);
+        })
+        {
+            return (T)jsonSer.ReadObject(ms);
+        }
     }
 }
 

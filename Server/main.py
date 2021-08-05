@@ -256,7 +256,7 @@ class UpdateEntryParams(BaseModel):
 @app.post("/update_entry")
 async def update_entry_json(request: Request):
     body = await request.body()
-    ascii = body.decode('ASCII')
+    ascii = body.decode('utf8')
     asciisplit = ascii.rsplit('}', 1)
 
     try:
