@@ -276,15 +276,12 @@ async def update_entry_json(request: Request):
     if abs(params.value) > max_int:
         raise HTTPException(status_code=422, detail="Value is exceeding max size of +-" + str(max_int) + " (" + str(MAX_VALUE_BYTES) + " byte signed integer)")
     
-    # This will need to be changed later on to delete the lower scores instead of blocking new ones
-    if leaderboard_is_full(params.leaderboard_id):
-        raise HTTPException(status_code=422, detail="The leaderboard has reached the maximum size of " + str(MAX_ENTRIES_PER_LEADERBOARD))
-    
     hash = asciisplit[1]
 
     if params.token is not None:
         if user_with_token_owns_leaderboard(params.token, params.leaderboard_id):
             update_entry(params.name, params.value, params.leaderboard_id)
+            prune_table(params.leaderboard_id)
     else:
         if len(hash) == 0:
             raise HTTPException(status_code=422, detail="Hash is required when not using token")
@@ -298,6 +295,7 @@ async def update_entry_json(request: Request):
         needed_hash2 = hasher.digest()
         if hash.lower() == needed_hash.hex().lower() or hash.lower() == needed_hash2.hex().lower():
             update_entry(params.name, params.value, params.leaderboard_id)
+            prune_table(params.leaderboard_id)
         else:
             raise HTTPException(status_code=422, detail="Hash is not correct")
         
@@ -313,6 +311,21 @@ def update_entry(name: str, value: Union[int, float], leaderboard_id: int):
     cur.execute('INSERT INTO entry(name, value, leaderboard_id) VALUES(:name, :value, :leaderboard_id) ' +
         'ON CONFLICT(name, leaderboard_id) DO UPDATE SET value=excluded.value WHERE excluded.value ' + override_mode[sorting] + ' value;',
         {"name" : name, "value" : value, "leaderboard_id" : leaderboard_id})
+    con.commit()
+
+def prune_table(leaderboard_id: int):
+    sorting = get_leaderboard_sorting(leaderboard_id);
+    position_query = {
+        "a": "ORDER BY value ASC",
+        "d": "ORDER BY value DESC",
+        "n": "ORDER BY ROWID DESC "
+    }
+    con = get_connection()
+    cur = con.cursor()
+    query = ('DELETE FROM entry WHERE leaderboard_id == :leaderboard_id ' +
+        position_query[sorting] +
+        ' LIMIT -1 OFFSET :MAX_ENTRIES_PER_LEADERBOARD;')
+    cur.execute(query, {"leaderboard_id" : leaderboard_id, "MAX_ENTRIES_PER_LEADERBOARD" : MAX_ENTRIES_PER_LEADERBOARD})
     con.commit()
 
 class DeleteEntryParams(BaseModel):
