@@ -5,9 +5,8 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, StrictInt, StrictFloat, ValidationError
 from enum import Enum
 from typing import Union, Optional
-import sys
 
-import requests, json, sqlite3, random, binascii, hashlib, base64
+import sys, requests, json, sqlite3, secrets, binascii, hashlib, base64
 
 MAX_LEADERBOARDS_PER_USER = 30
 MAX_ENTRIES_PER_LEADERBOARD = 5000
@@ -182,7 +181,7 @@ def create_leaderboard_json(params: CreateLeaderboardParams):
 def create_leaderboard(name: str, userid: int):
     if has_maximum_number_of_leaderboards(userid):
         raise HTTPException(status_code=422, detail="The maximum amount of leaderboards (" + str(MAX_LEADERBOARDS_PER_USER) + ") for this user has been reached")
-    secret = '%x' % random.getrandbits(128)
+    secret = secrets.token_hex(16)
     con = get_connection()
     cur = con.cursor()
     cur.execute(('INSERT INTO leaderboard(secret, itch_user_id, name)'
