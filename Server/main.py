@@ -131,6 +131,23 @@ def get_leaderboards(itch_user_id: int):
     cur.execute('SELECT * FROM leaderboard WHERE itch_user_id == :itch_user_id', {"itch_user_id" : itch_user_id})
     return (cur.fetchall())
 
+class GetEntryCountParams(BaseModel):
+    leaderboard_id: int
+
+@app.post("/get_entry_count")
+def get_entry_count_json(params: GetEntryCountParams):
+    return get_entry_count(params.leaderboard_id)
+
+@app.get("/get_entry_count")
+def get_entry_count_get(leaderboard_id: int):
+    return get_entry_count(leaderboard_id)
+
+def get_entry_count(leaderboard_id: int):
+    con = get_connection()
+    cur = con.cursor()
+    cur.execute("SELECT COUNT(*) AS count FROM entry where leaderboard_id == :leaderboard_id", {"leaderboard_id" : leaderboard_id});
+    return (cur.fetchone())
+
 class GetEntriesParams(BaseModel):
     leaderboard_id: int
     start: int = 0

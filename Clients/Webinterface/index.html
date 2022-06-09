@@ -118,6 +118,8 @@ input::placeholder{
 
 		<div class="horizontal_group" style="justify-content: space-between">
 			<span class="table_element table_button interactable" v-on:click="back()">Go back to Leaderboards</span>
+			<span class="table_element">{{ entry_count == 1 ? '1 entry' : entry_count + ' entries'}} total</span>
+			<span class="table_element table_button interactable" v-on:click="reload_entries()">Refresh</span>
 			<span class="table_element table_button interactable" v-on:click="showInfo()">API Info / Settings</span>
 		</div>
 		
@@ -220,6 +222,7 @@ var entries_app = new Vue({
 	data: {
 		display: false,
 		entries: [],
+		entry_count: 0,
 		leaderboard: -1,
 		searchstring: "",
 		current_entry_index: 1,
@@ -243,6 +246,7 @@ var entries_app = new Vue({
 			this.reload_entries();
 		},
 		reload_entries: function() {
+			getScoreEntryCount(this.leaderboard);
 			getScoreEntries(this.leaderboard, this.current_entry_index - 1, this.current_entry_count, this.searchstring);
 		},
 		submit: function(name, value) {
@@ -321,6 +325,14 @@ function loadLeaderboards() {
 			document.getElementById("status").innerHTML = "Here are your leaderboards!";
 			show_loading_image(false);
 		});
+}
+
+function getScoreEntryCount(leaderboard_id) {
+        axios.post('/leaderboards/v1/api/get_entry_count',
+		{ leaderboard_id: leaderboard_id })
+                .then(function(response) {
+                        entries_app.entry_count = response.data.count;
+                });
 }
 
 function getScoreEntries(leaderboard_id, index, count, searchstring) {
