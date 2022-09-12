@@ -39,8 +39,13 @@ func request_user_entry(name: String) -> void:
 # value can be int or float, therefore no type definition
 func send_user_value(name: String, value) -> void:
 	var url = server_endpoint + "/update_entry"
-	var upload_json = "{\"name\":\"{0}\", \"value\":{1}, \"leaderboard_id\":{2}}";
-	upload_json = upload_json.format([name, value, leaderboard_id])
+	var dict_to_serialize = {
+		"name": name,
+		"value": value,
+		"leaderboard_id": leaderboard_id
+	}
+	var upload_json = JSON.print(dict_to_serialize)
+	print(upload_json)
 	var to_hash = "/update_entry" + upload_json + leaderboard_secret;
 	var ctx = HashingContext.new()
 	ctx.start(HashingContext.HASH_SHA256)
