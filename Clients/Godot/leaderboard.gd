@@ -45,7 +45,6 @@ func send_user_value(name: String, value) -> void:
 		"leaderboard_id": leaderboard_id
 	}
 	var upload_json = JSON.print(dict_to_serialize)
-	print(upload_json)
 	var to_hash = "/update_entry" + upload_json + leaderboard_secret;
 	var ctx = HashingContext.new()
 	ctx.start(HashingContext.HASH_SHA256)
