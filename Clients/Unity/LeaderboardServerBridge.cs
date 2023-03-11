@@ -6,6 +6,8 @@ using System.Runtime.Serialization.Json;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using System.Globalization;
+using System.Web;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -18,47 +20,22 @@ public class LeaderboardServerBridge : MonoBehaviour
     public async Task<List<LeaderboardEntry>> RequestEntries(int start, int count)
     {
         string url = serverEndpoint + $"/get_entries?leaderboard_id={leaderboardID}&start={start}&count={count}";
-        using (UnityWebRequest unityWebRequest = UnityWebRequest.Get(url))
-        {
-            await unityWebRequest.SendWebRequestAsync();
-            switch (unityWebRequest.result)
-            {
-                case UnityWebRequest.Result.ConnectionError:
-                case UnityWebRequest.Result.DataProcessingError:
-                case UnityWebRequest.Result.ProtocolError:
-                    Debug.LogError(unityWebRequest.error);
-                    Debug.LogError(unityWebRequest.downloadHandler.text);
-                    break;
-                case UnityWebRequest.Result.Success:
-                    List<LeaderboardEntry> scores = DeserializeJson<List<LeaderboardEntry>>(unityWebRequest.downloadHandler.text);
-                    return scores;
-            }
-        }
-        return null;
+        string requestResult = await RunUnityWebRequest(UnityWebRequest.Get(url));
+        if (requestResult == null) return null;
+        List<LeaderboardEntry> scores = DeserializeJson<List<LeaderboardEntry>>(requestResult);
+        return scores;
     }
 
     public async Task<LeaderboardEntry> RequestUserEntry(string name)
     {
-        string url = serverEndpoint + $"/get_entries?leaderboard_id={leaderboardID}&start=1&count=1&search={name}";
-        using (UnityWebRequest unityWebRequest = UnityWebRequest.Get(url))
+        string urlEncodedName = HttpUtility.UrlEncode(name);
+        string url = serverEndpoint + $"/get_entries?leaderboard_id={leaderboardID}&start=1&count=1&search={urlEncodedName}";
+        string requestResult = await RunUnityWebRequest(UnityWebRequest.Get(url));
+        if (requestResult == null) return null;
+        List<LeaderboardEntry> scores = DeserializeJson<List<LeaderboardEntry>>(requestResult);
+        if (scores != null && scores.Count > 0)
         {
-            await unityWebRequest.SendWebRequestAsync();
-            switch (unityWebRequest.result)
-            {
-                case UnityWebRequest.Result.ConnectionError:
-                case UnityWebRequest.Result.DataProcessingError:
-                case UnityWebRequest.Result.ProtocolError:
-                    Debug.LogError(unityWebRequest.error);
-                    Debug.LogError(unityWebRequest.downloadHandler.text);
-                    break;
-                case UnityWebRequest.Result.Success:
-                    List<LeaderboardEntry> scores = DeserializeJson<List<LeaderboardEntry>>(unityWebRequest.downloadHandler.text);
-                    if (scores != null && scores.Count > 0)
-                    {
-                        return scores[0];
-                    }
-                    return null;
-            }
+            return scores[0];
         }
         return null;
     }
@@ -81,8 +58,8 @@ public class LeaderboardServerBridge : MonoBehaviour
     async Task<bool> SendUserValue(string name, IConvertible value)
     {
         string url = serverEndpoint + "/update_entry";
-        string valueString = value.ToString();
-        string uploadJson = $"{{\"name\":\"{name}\", \"value\":{valueString}, \"leaderboard_id\":{leaderboardID}}}";
+        string valueString = value.ToString(CultureInfo.InvariantCulture);
+        string uploadJson = SerializeJson(new EntryUpdate(name, valueString, leaderboardID));
         string toHash = "/update_entry" + uploadJson + leaderboardSecret;
 
         byte[] utfBytes = Encoding.UTF8.GetBytes(toHash);
@@ -96,7 +73,13 @@ public class LeaderboardServerBridge : MonoBehaviour
 
         DownloadHandlerBuffer d = new DownloadHandlerBuffer();
         UploadHandlerRaw u = new UploadHandlerRaw(rawBytes);
-        using (UnityWebRequest unityWebRequest = new UnityWebRequest(url, "POST", d, u))
+        string requestResult = await RunUnityWebRequest(new UnityWebRequest(url, "POST", d, u));
+        return requestResult != null;
+    }
+
+    async Task<string> RunUnityWebRequest(UnityWebRequest unityWebRequest)
+    {
+        using (unityWebRequest)
         {
             await unityWebRequest.SendWebRequestAsync();
             switch (unityWebRequest.result)
@@ -108,21 +91,29 @@ public class LeaderboardServerBridge : MonoBehaviour
                     Debug.LogError(unityWebRequest.downloadHandler.text);
                     break;
                 case UnityWebRequest.Result.Success:
-                    return true;
+                    return unityWebRequest.downloadHandler.text;
             }
         }
-        return false;
+        return null;
     }
 
     T DeserializeJson<T>(string result)
     {
         DataContractJsonSerializer jsonSer = new DataContractJsonSerializer(typeof(T));
-        using (MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(result))
-        {
-            Position = 0
-        })
+        using (MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(result)){ Position = 0 })
         {
             return (T)jsonSer.ReadObject(ms);
+        }
+    }
+
+    string SerializeJson<T>(T value)
+    {
+        DataContractJsonSerializer jsonSer = new DataContractJsonSerializer(typeof(T));
+        using (MemoryStream ms = new MemoryStream())
+        {
+            jsonSer.WriteObject(ms, value);
+            ms.Position = 0;
+            return new StreamReader(ms).ReadToEnd();
         }
     }
 }
@@ -134,6 +125,24 @@ public static class WebRequestAsyncExtension
         TaskCompletionSource<AsyncOperation> taskCompletionSource = new TaskCompletionSource<AsyncOperation>();
         unityWebRequest.SendWebRequest().completed += x => taskCompletionSource.SetResult(x);
         return taskCompletionSource.Task;
+    }
+}
+
+[DataContract]
+public class EntryUpdate
+{
+    [DataMember]
+    readonly public string name;
+    [DataMember()]
+    readonly public string value;
+    [DataMember]
+    readonly public int leaderboard_id;
+
+    public EntryUpdate(string name, string value, int leaderboard_id)
+    {
+        this.name = name;
+        this.value = value;
+        this.leaderboard_id = leaderboard_id;
     }
 }
 
@@ -156,7 +165,7 @@ public class LeaderboardEntry
 
     public int GetValueAsInt()
     {
-        if(int.TryParse(_value, out int result))
+        if(int.TryParse(_value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int result))
         {
             return result;
         }
@@ -168,11 +177,11 @@ public class LeaderboardEntry
 
     public float GetValueAsFloat()
     {
-        return float.Parse(_value);
+        return float.Parse(_value, CultureInfo.InvariantCulture);
     }
 
     public double GetValueAsDouble()
     {
-        return double.Parse(_value);
+        return double.Parse(_value, CultureInfo.InvariantCulture);
     }
 }
