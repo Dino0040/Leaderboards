@@ -159,6 +159,10 @@ input::placeholder{
 		</div>
 		
 		<div class="horizontal_group">
+                        <span class="table_element" style="width: 20ch">Endpoint:</span>
+                        <span class="table_element" style="flex-grow: 1">{{rootpath}}</span>
+                </div>
+		<div class="horizontal_group">
 			<span class="table_element" style="width: 20ch">Leaderboard id:</span>
 			<span class="table_element" style="flex-grow: 1">{{leaderboard.id}}</span>
 		</div>
@@ -317,7 +321,7 @@ function showAPIInfo() {
 	entries_app.display = false;
 	api_info_app.display = true;
 	var url = document.URL;
-	api_info_app.rootpath = url.substring(0, url.indexOf('#')) + APIENDPOINT;
+	api_info_app.rootpath = url.substring(0, url.indexOf('#')) + "api";
 	for (leaderboard of leaderboard_app.leaderboards){
 		if(leaderboard.id == api_info_app.leaderboard_id){
 			api_info_app.leaderboard = leaderboard;
