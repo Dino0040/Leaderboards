@@ -361,3 +361,20 @@ def delete_entry(name: str, leaderboard_id: int):
     cur.execute("DELETE FROM entry WHERE leaderboard_id = :leaderboard_id AND name = :name;",
         {"leaderboard_id" : leaderboard_id, "name" : name})
     con.commit()
+
+class ClearLeaderboardParams(BaseModel):
+    leaderboard_id: int
+    token: str
+
+@app.post("/clear_leaderboard")
+def clear_leaderboard_json(params: ClearLeaderboardParams):
+    if params.token is not None:
+        if user_with_token_owns_leaderboard(params.token, params.leaderboard_id):
+            clear_leaderboard(params.leaderboard_id)
+
+def clear_leaderboard(leaderboard_id: int):
+    con = get_connection()
+    cur = con.cursor()
+    cur.execute("DELETE FROM entry WHERE leaderboard_id = :leaderboard_id;",
+        {"leaderboard_id" : leaderboard_id})
+    con.commit()

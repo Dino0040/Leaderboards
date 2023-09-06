@@ -182,6 +182,11 @@ input::placeholder{
 			<input type="text" v-model="new_leaderboard_name" style="flex-grow: 2" class="table_element interactable" placeholder="...new name...">
 			<button class="table_element table_button interactable" style="flex-grow: 1" v-on:click="rename(new_leaderboard_name)">Rename</span>
 		</div>
+
+		<div class="horizontal_group">
+                        <input type="text" v-model="confirmation" style="flex-grow: 2" class="table_element interactable" placeholder="Type 'I AM SURE' to confirm">
+                        <button class="table_element table_button interactable" style="flex-grow: 1" v-bind:disabled="confirmation != 'I AM SURE'" v-on:click="clear()">Clear All Entries</span>
+                </div>
 </div>
 
 <img src="loading.png" class="center" id="loading_image">
@@ -275,7 +280,8 @@ var api_info_app = new Vue({
 		leaderboard_id: -1,
 		rootpath: "",
 		leaderboard: [],
-		new_leaderboard_name: ''
+		new_leaderboard_name: '',
+		confirmation: ""
 	},
 	methods: {
 		back: function() {
@@ -287,7 +293,10 @@ var api_info_app = new Vue({
 		},
 		change_sorting: function(sorting) {
 		    set_leaderboard_sorting(this.leaderboard_id, sorting);
-		}
+		},
+		clear: function() {
+                    clear_leaderboard(this.leaderboard_id);
+                }
 	}
 });
 
@@ -308,7 +317,7 @@ function showAPIInfo() {
 	entries_app.display = false;
 	api_info_app.display = true;
 	var url = document.URL;
-	api_info_app.rootpath = url.substring(0, url.indexOf('#')) + "/leaderboards/v1/api/";
+	api_info_app.rootpath = url.substring(0, url.indexOf('#')) + APIENDPOINT;
 	for (leaderboard of leaderboard_app.leaderboards){
 		if(leaderboard.id == api_info_app.leaderboard_id){
 			api_info_app.leaderboard = leaderboard;
@@ -321,7 +330,7 @@ function loadLeaderboards() {
 	api_info_app.display = false;
 	document.getElementById("status").innerHTML = "Loading leaderboards...";
 	show_loading_image(true);
-	axios.post('/leaderboards/v1/api/get_leaderboards',
+	axios.post(APIENDPOINT + 'get_leaderboards',
 		{ token: accessToken })
 		.then(function(response) {
 			leaderboard_app.leaderboards = response.data;
@@ -332,7 +341,7 @@ function loadLeaderboards() {
 }
 
 function getScoreEntryCount(leaderboard_id) {
-        axios.post('/leaderboards/v1/api/get_entry_count',
+        axios.post(APIENDPOINT + 'get_entry_count',
 		{ leaderboard_id: leaderboard_id })
                 .then(function(response) {
                         entries_app.entry_count = response.data.count;
@@ -344,7 +353,7 @@ function getScoreEntries(leaderboard_id, index, count, searchstring) {
 	api_info_app.display = false;
 	document.getElementById("status").innerHTML = "Loading Entries...";
 	show_loading_image(true);
-	axios.post('/leaderboards/v1/api/get_entries',
+	axios.post(APIENDPOINT + 'get_entries',
 		{ leaderboard_id: leaderboard_id, start: index, count: count, search: searchstring})
 		.then(function(response) {
 			entries_app.entries = response.data;
@@ -358,7 +367,7 @@ function getScoreEntries(leaderboard_id, index, count, searchstring) {
 function createLeaderboard(name) {
 	document.getElementById("status").innerHTML = "Creating Leaderboard...";
 	show_loading_image(true);
-	axios.post('/leaderboards/v1/api/create_leaderboard',
+	axios.post(APIENDPOINT + 'create_leaderboard',
 		{ token: accessToken, name: name })
 		.then(function(response) {
 			loadLeaderboards();
@@ -369,7 +378,7 @@ function createLeaderboard(name) {
 function delete_leaderboard(id) {
 	show_loading_image(true);
 	document.getElementById("status").innerHTML = "Deleting Leaderboard...";
-	axios.post('/leaderboards/v1/api/delete_leaderboard',
+	axios.post(APIENDPOINT + 'delete_leaderboard',
 		{ token: accessToken, id: id })
 		.then(function(response) {
 			loadLeaderboards();
@@ -380,7 +389,7 @@ function delete_leaderboard(id) {
 function set_leaderboard_name(id, name) {
 	show_loading_image(true);
 	document.getElementById("status").innerHTML = "Renaming Leaderboard...";
-	axios.post('/leaderboards/v1/api/set_leaderboard_name',
+	axios.post(APIENDPOINT + 'set_leaderboard_name',
 		{ token: accessToken, id: id, name: name})
 		.then(function(response) {
 			loadLeaderboards();
@@ -391,7 +400,7 @@ function set_leaderboard_name(id, name) {
 function set_leaderboard_sorting(id, sorting) {
 	show_loading_image(true);
 	document.getElementById("status").innerHTML = "Changing Sorting Mode...";
-	axios.post('/leaderboards/v1/api/set_leaderboard_sorting',
+	axios.post(APIENDPOINT + 'set_leaderboard_sorting',
 		{ token: accessToken, id: id, sorting: sorting})
 		.then(function(response) {
 			loadLeaderboards();
@@ -399,10 +408,21 @@ function set_leaderboard_sorting(id, sorting) {
 		});
 }
 
+function clear_leaderboard(leaderboard_id) {
+        show_loading_image(true);
+        document.getElementById("status").innerHTML = "Clearing All Entries...";
+        axios.post(APIENDPOINT + 'clear_leaderboard',
+                { token: accessToken, leaderboard_id: leaderboard_id})
+                .then(function(response) {
+                        loadLeaderboards();
+                        show_loading_image(false);
+                });
+}
+
 function submit_entry(leaderboard_id, name, value) {
 	show_loading_image(true);
 	document.getElementById("status").innerHTML = "Submitting Entry...";
-	axios.post('/leaderboards/v1/api/update_entry',
+	axios.post(APIENDPOINT + 'update_entry',
 		{ token: accessToken, leaderboard_id: leaderboard_id, name: name, value: value})
 		.then(function(response) {
 			getScoreEntries(leaderboard_id);
@@ -413,7 +433,7 @@ function submit_entry(leaderboard_id, name, value) {
 function delete_entry(leaderboard_id, name) {
 	show_loading_image(true);
 	document.getElementById("status").innerHTML = "Deleting Entry...";
-	axios.post('/leaderboards/v1/api/delete_entry',
+	axios.post(APIENDPOINT + 'delete_entry',
 		{ token: accessToken, leaderboard_id: leaderboard_id, name: name })
 		.then(function(response) {
 			show_loading_image(false);
@@ -429,7 +449,7 @@ if(accessToken)
 	document.getElementById("status").innerHTML = "Getting Status...";
 	
 	show_loading_image(true);
-	axios.post('/leaderboards/v1/api/get_account_status',
+	axios.post(APIENDPOINT + 'get_account_status',
 		{ token: accessToken })
 		.then(function(response) {
 			show_loading_image(false);
