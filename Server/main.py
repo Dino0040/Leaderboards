@@ -41,11 +41,13 @@ async def validation_exception_handler(request, exc):
     )
 
 def get_user_info(token: str):
-    if token is not None:
-        response = requests.get("https://itch.io/api/1/" + token + "/me")
-        parsed = json.loads(response.text)
-        return parsed.get("user")
-    return None
+    if token is None:
+        return None
+    if token.isalnum() == False:
+        return None
+    response = requests.get("https://itch.io/api/1/" + token + "/me")
+    parsed = json.loads(response.text)
+    return parsed.get("user")
 
 def user_owns_leaderboard(user: int, leaderboard_id: int):
     con = get_connection()
