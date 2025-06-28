@@ -104,7 +104,6 @@ input::placeholder{
 			<div class="horizontal_group">
 			
 			<button class="table_element table_button interactable" style="flex-grow: 1" v-on:click="open(leaderboard.id)">{{ leaderboard.name }}</span>
-			<button class="table_element table_button interactable" style="width: 1ch" v-on:click="del(leaderboard.id)">X</span>
 			
 			</div>
 		</span>
@@ -190,6 +189,7 @@ input::placeholder{
 		<div class="horizontal_group">
                         <input type="text" v-model="confirmation" style="flex-grow: 2" class="table_element interactable" placeholder="Type 'I AM SURE' to confirm">
                         <button class="table_element table_button interactable" style="flex-grow: 1" v-bind:disabled="confirmation != 'I AM SURE'" v-on:click="clear()">Clear All Entries</span>
+                        <button class="table_element table_button interactable" style="flex-grow: 1" v-bind:disabled="confirmation != 'I AM SURE'" v-on:click="del(leaderboard.id)">Delete Leaderboard</span>
                 </div>
 </div>
 
@@ -223,9 +223,6 @@ var leaderboard_app = new Vue({
 		create: function(name) {
 			createLeaderboard(name);
 			this.new_leaderboard_name = '';
-		},
-		del: function(id) {
-			delete_leaderboard(id);
 		}
 	}
 });
@@ -299,8 +296,13 @@ var api_info_app = new Vue({
 		    set_leaderboard_sorting(this.leaderboard_id, sorting);
 		},
 		clear: function() {
-                    clear_leaderboard(this.leaderboard_id);
-                }
+			clear_leaderboard(this.leaderboard_id);
+			this.confirmation = "";
+        },
+		del: function(id) {
+			delete_leaderboard(this.leaderboard_id);
+			this.confirmation = "";
+		}
 	}
 });
 
