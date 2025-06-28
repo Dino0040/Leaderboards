@@ -28,6 +28,7 @@ app.add_middleware(
 
 @app.exception_handler(HTTPException)
 async def error_exception_handler(request: Request, exc: HTTPException):
+    print(exc.detail)
     return JSONResponse(
         status_code=exc.status_code,
         content={"error": exc.detail}
@@ -35,6 +36,7 @@ async def error_exception_handler(request: Request, exc: HTTPException):
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc):
+    print(str(exc))
     return JSONResponse(
         status_code=400,
         content={"error": str(exc)}
