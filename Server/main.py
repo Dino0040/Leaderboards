@@ -251,6 +251,28 @@ def set_leaderboard_name(id: int, name: str):
         {"id" : id, "name": name})
     con.commit()
 
+class SetLeaderboardSecretParams(BaseModel):
+    id: int
+    token: str
+    secret: Union[str, None]
+
+@app.post("/set_leaderboard_secret")
+def set_leaderboard_secret_json(params: SetLeaderboardSecretParams):
+    if not params.secret:
+        params.secret = secrets.token_hex(16)
+    else:
+        if len(params.secret) > 32:
+            raise HTTPException(status_code=422, detail="Secret is exceeding max length of 32")
+    if user_with_token_owns_leaderboard(params.token, params.id):
+        set_leaderboard_secret(params.id, params.secret)
+
+def set_leaderboard_secret(id: int, secret: str):
+    con = get_connection()
+    cur = con.cursor()
+    cur.execute("UPDATE leaderboard SET secret = :secret WHERE id = :id;",
+        {"id" : id, "secret": secret})
+    con.commit()
+
 class DeleteLeaderboardParams(BaseModel):
     id: int
     token: str

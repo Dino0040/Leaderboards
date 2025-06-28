@@ -187,10 +187,15 @@ input::placeholder{
 		</div>
 
 		<div class="horizontal_group">
-                        <input type="text" v-model="confirmation" style="flex-grow: 2" class="table_element interactable" placeholder="Type 'I AM SURE' to confirm">
-                        <button class="table_element table_button interactable" style="flex-grow: 1" v-bind:disabled="confirmation != 'I AM SURE'" v-on:click="clear()">Clear All Entries</span>
-                        <button class="table_element table_button interactable" style="flex-grow: 1" v-bind:disabled="confirmation != 'I AM SURE'" v-on:click="del(leaderboard.id)">Delete Leaderboard</span>
-                </div>
+			<input type="text" v-model="user_set_secret" style="flex-grow: 2" class="table_element interactable" placeholder="...generate new secret for me..." :maxlength=32>
+			<button class="table_element table_button interactable" v-on:click="set_secret()">Set Secret</span>
+        </div>
+
+        <div class="horizontal_group">
+			<input type="text" v-model="confirmation" style="flex-grow: 2" class="table_element interactable" placeholder="...type 'I AM SURE' to confirm...">
+			<button class="table_element table_button interactable" v-bind:disabled="confirmation != 'I AM SURE'" v-on:click="clear()">Clear All Entries</span>
+			<button class="table_element table_button interactable" v-bind:disabled="confirmation != 'I AM SURE'" v-on:click="del(leaderboard.id)">Delete Leaderboard</span>
+        </div>
 </div>
 
 <img src="loading.png" class="center" id="loading_image">
@@ -282,7 +287,8 @@ var api_info_app = new Vue({
 		rootpath: "",
 		leaderboard: [],
 		new_leaderboard_name: '',
-		confirmation: ""
+		confirmation: "",
+		user_set_secret: ""
 	},
 	methods: {
 		back: function() {
@@ -302,6 +308,10 @@ var api_info_app = new Vue({
 		del: function(id) {
 			delete_leaderboard(this.leaderboard_id);
 			this.confirmation = "";
+		},
+		set_secret: function(id) {
+			set_leaderboard_secret(this.leaderboard_id, this.user_set_secret);
+			this.user_set_secret = "";
 		}
 	}
 });
@@ -386,6 +396,17 @@ function delete_leaderboard(id) {
 	document.getElementById("status").innerHTML = "Deleting Leaderboard...";
 	axios.post(APIENDPOINT + 'delete_leaderboard',
 		{ token: accessToken, id: id })
+		.then(function(response) {
+			loadLeaderboards();
+			show_loading_image(false);
+		});
+}
+
+function set_leaderboard_secret(id, secret) {
+	show_loading_image(true);
+	document.getElementById("status").innerHTML = "Setting Leaderboard Secret...";
+	axios.post(APIENDPOINT + 'set_leaderboard_secret',
+		{ token: accessToken, id: id, secret: secret })
 		.then(function(response) {
 			loadLeaderboards();
 			show_loading_image(false);
