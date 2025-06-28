@@ -254,7 +254,7 @@ def set_leaderboard_name(id: int, name: str):
 class SetLeaderboardSecretParams(BaseModel):
     id: int
     token: str
-    secret: Union[str, None]
+    secret: str = None
 
 @app.post("/set_leaderboard_secret")
 def set_leaderboard_secret_json(params: SetLeaderboardSecretParams):
@@ -293,7 +293,7 @@ class UpdateEntryParams(BaseModel):
     name: str
     value: Union[StrictInt, StrictFloat, float]
     leaderboard_id: int
-    token: Union[str, None]
+    token: str = None
 
 @app.post("/update_entry")
 async def update_entry_json(request: Request):
